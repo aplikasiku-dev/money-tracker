@@ -408,25 +408,24 @@ async function saveProfilePhoto(event) {
         input.value = '';
         return;
     }
-    if (file.size > 1024 * 1024) {
-        showToast('Ukuran foto maksimal 1 MB.', 'error');
+    if (file.size > 5 * 1024 * 1024) {
+        showToast('Ukuran foto maksimal 5 MB.', 'error');
         input.value = '';
         return;
     }
 
     try {
-        const profileImage = await new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => {
-                if (typeof reader.result !== 'string') {
-                    reject(new Error('File foto tidak dapat dibaca.'));
-                    return;
-                }
-                resolve(reader.result);
-            };
-            reader.onerror = () => reject(new Error('Gagal membaca file foto profil.'));
-            reader.readAsDataURL(file);
-        });
+        const image = await createImageBitmap(file);
+        const maxDimension = 512;
+        const scale = Math.min(1, maxDimension / Math.max(image.width, image.height));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(image.width * scale));
+        canvas.height = Math.max(1, Math.round(image.height * scale));
+        const context = canvas.getContext('2d');
+        if (!context) throw new Error('Browser tidak dapat mengolah foto profil.');
+        context.drawImage(image, 0, 0, canvas.width, canvas.height);
+        image.close();
+        const profileImage = canvas.toDataURL('image/webp', 0.85);
         const user = getActiveUserData();
         user.profileImage = profileImage;
         saveActiveUserData(user);
