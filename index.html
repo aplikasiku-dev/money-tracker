@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aplikasi Buku Tabungan Siswa</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Plus Jakarta Sans -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-[#F8FAFC] font-['Plus_Jakarta_Sans',sans-serif] text-slate-800 antialiased">
+
+    <!-- TOAST NOTIFICATION CONTAINER -->
+    <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- 1. HALAMAN LOGIN -->
+    <section id="login-page" class="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-900 via-indigo-950 to-blue-900">
+        <div class="bg-white w-full max-w-md p-8 rounded-2xl shadow-2xl border border-slate-100">
+            <div class="text-center mb-8">
+                <div class="inline-flex items-center justify-center w-14 h-14 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-200 mb-4">
+                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+                </div>
+                <h1 class="text-2xl font-bold text-slate-900">Buku Tabungan Siswa</h1>
+                <p class="text-sm text-slate-500 mt-1">Silakan masuk ke akun administrator Anda</p>
+            </div>
+
+            <form id="login-form" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Email</label>
+                    <input type="email" id="login-email" required placeholder="admin@tabungan.com" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100 outline-none transition text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Kata Sandi</label>
+                    <div class="relative">
+                        <input type="password" id="login-password" required placeholder="••••••••" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100 outline-none transition text-sm pr-10">
+                        <button type="button" onclick="togglePasswordVisibility('login-password', 'eye-icon-login')" class="absolute right-3 top-3.5 text-slate-400 hover:text-slate-600">
+                            <svg id="eye-icon-login" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                        </button>
+                    </div>
+                    <div class="mt-2 text-right">
+                        <a href="#" onclick="switchAuthView('forgot'); return false;" class="text-xs font-semibold text-indigo-600 hover:underline">Lupa kata sandi?</a>
+                    </div>
+                </div>
+                <button type="submit" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl shadow-lg shadow-indigo-200 transition duration-200 text-sm">Masuk Dashboard</button>
+            </form>
+
+            <div class="mt-6 text-center text-sm text-slate-500">
+                Belum punya akun? <a href="#" onclick="switchAuthView('register')" class="text-indigo-600 font-semibold hover:underline">Daftar di sini</a>
+            </div>
+            
+            <div class="mt-6 pt-4 border-t border-slate-100 text-center text-xs text-slate-400">
+                Akun Default: <span class="font-mono text-slate-600">admin@tabungan.com</span> / <span class="font-mono text-slate-600">Password123</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- RESET PASSWORD: EMAIL REQUEST -->
+    <section id="forgot-page" class="hidden min-h-screen flex items-center justify-center p-4 bg-white">
+        <div class="w-full max-w-md border border-slate-200 rounded-xl p-8">
+            <h1 class="text-2xl font-bold text-slate-900">Lupa kata sandi</h1>
+            <p class="mt-2 mb-6 text-sm text-slate-500">Masukkan email akun. Kami akan mengirim tautan untuk membuat kata sandi baru.</p>
+            <form id="forgot-form" class="space-y-4">
+                <div>
+                    <label for="forgot-email" class="block text-sm font-medium text-slate-700 mb-1">Email</label>
+                    <input type="email" id="forgot-email" autocomplete="email" required class="w-full rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100">
+                </div>
+                <button type="submit" class="w-full rounded-lg bg-indigo-600 px-4 py-3 text-sm font-semibold text-white hover:bg-indigo-700">Kirim tautan reset</button>
+            </form>
+            <button type="button" onclick="switchAuthView('login')" class="mt-5 text-sm font-semibold text-indigo-600 hover:underline">Kembali ke login</button>
+        </div>
+    </section>
+
+    <!-- RESET PASSWORD: TOKEN FROM EMAIL -->
+    <section id="reset-page" class="hidden min-h-screen flex items-center justify-center p-4 bg-white">
+        <div class="w-full max-w-md border border-slate-200 rounded-xl p-8">
+            <h1 class="text-2xl font-bold text-slate-900">Buat kata sandi baru</h1>
+            <p id="reset-email-display" class="mt-2 mb-6 text-sm text-slate-500"></p>
+            <form id="reset-form" class="space-y-4">
+                <input type="hidden" id="reset-token">
+                <input type="hidden" id="reset-email">
+                <div>
+                    <label for="reset-password" class="block text-sm font-medium text-slate-700 mb-1">Kata sandi baru</label>
+                    <input type="password" id="reset-password" autocomplete="new-password" minlength="8" required class="w-full rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100">
+                </div>
+                <div>
+                    <label for="reset-password-confirm" class="block text-sm font-medium text-slate-700 mb-1">Ulangi kata sandi baru</label>
+                    <input type="password" id="reset-password-confirm" autocomplete="new-password" minlength="8" required class="w-full rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100">
+                </div>
+                <button type="submit" class="w-full rounded-lg bg-indigo-600 px-4 py-3 text-sm font-semibold text-white hover:bg-indigo-700">Simpan kata sandi</button>
+            </form>
+        </div>
+    </section>
+
+    <!-- 2. HALAMAN REGISTER -->
+    <section id="register-page" class="hidden min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-900 via-indigo-950 to-blue-900">
+        <div class="bg-white w-full max-w-md p-8 rounded-2xl shadow-2xl border border-slate-100">
+            <div class="text-center mb-8">
+                <div class="inline-flex items-center justify-center w-14 h-14 bg-emerald-600 text-white rounded-xl shadow-lg shadow-emerald-200 mb-4">
+                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
+                </div>
+                <h1 class="text-2xl font-bold text-slate-900">Buat Akun Baru</h1>
+                <p class="text-sm text-slate-500 mt-1">Daftarkan akun administrator sistem tabungan</p>
+            </div>
+
+            <form id="register-form" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Nama Lengkap</label>
+                    <input type="text" id="reg-name" required placeholder="Contoh: Budi Santoso" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 outline-none transition text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Email</label>
+                    <input type="email" id="reg-email" required placeholder="email@domain.com" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 outline-none transition text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Kata Sandi</label>
+                    <div class="relative">
+                        <input type="password" id="reg-password" required placeholder="••••••••" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 outline-none transition text-sm pr-10">
+                        <button type="button" onclick="togglePasswordVisibility('reg-password', 'eye-icon-reg')" class="absolute right-3 top-3.5 text-slate-400 hover:text-slate-600">
+                            <svg id="eye-icon-reg" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <button type="submit" class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl shadow-lg shadow-emerald-200 transition duration-200 text-sm">Daftar Sekarang</button>
+            </form>
+
+            <div class="mt-6 text-center text-sm text-slate-500">
+                Sudah punya akun? <a href="#" onclick="switchAuthView('login')" class="text-indigo-600 font-semibold hover:underline">Masuk di sini</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- LOADING OVERLAY -->
+    <div id="loading-screen" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex flex-col items-center justify-center text-white">
+        <div class="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+        <p class="text-base font-medium tracking-wide">Memverifikasi Email...</p>
+    </div>
+
+    <!-- 3. HALAMAN UTAMA / DASHBOARD -->
+    <main id="dashboard-app" class="hidden flex h-screen overflow-hidden">
+        
+        <!-- SIDEBAR KIRI (Navy/Indigo) -->
+        <aside class="w-64 bg-[#0F172A] text-slate-300 flex flex-col justify-between hidden md:flex border-r border-slate-800">
+            <div>
+                <!-- Brand / Logo -->
+                <div class="h-16 flex items-center px-6 border-b border-slate-800/80">
+                    <div class="flex items-center gap-3">
+                        <div class="w-9 h-9 bg-indigo-600 text-white rounded-lg flex items-center justify-center font-bold text-lg shadow-md shadow-indigo-500/20">S</div>
+                        <span class="font-bold text-white text-base tracking-tight">Tabungan Siswa</span>
+                    </div>
+                </div>
+
+                <!-- Navigation Links -->
+                <div class="px-4 py-6 space-y-6 overflow-y-auto max-h-[calc(100vh-140px)]">
+                    <div>
+                        <p class="px-3 text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">Data Master</p>
+                        <nav class="space-y-1">
+                            <a href="#" onclick="setActiveNav(this, 'Dashboard')" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium bg-indigo-600 text-white shadow-sm">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+                                Dashboard Aktif
+                            </a>
+                            <a href="#" onclick="setActiveNav(this, 'Data Siswa')" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium hover:bg-slate-800/60 hover:text-white transition">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                                Data Siswa
+                            </a>
+                            <a href="#" onclick="setActiveNav(this, 'Data Kelas')" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium hover:bg-slate-800/60 hover:text-white transition">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+                                Data Kelas
+                            </a>
+                            <a href="#" onclick="setActiveNav(this, 'Data Pengguna')" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium hover:bg-slate-800/60 hover:text-white transition">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/></svg>
+                                Data Pengguna
+                            </a>
+                        </nav>
+                    </div>
+
+                    <div>
+                        <p class="px-3 text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">Transaksi</p>
+                        <nav class="space-y-1">
+                            <a href="#transaction-entry" onclick="focusTransactionForm('pemasukan')" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium hover:bg-slate-800/60 hover:text-white transition">
+                                <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                Setoran
+                            </a>
+                            <a href="#transaction-entry" onclick="focusTransactionForm('pengeluaran')" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium hover:bg-slate-800/60 hover:text-white transition">
+                                <svg class="w-5 h-5 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                Penarikan
+                            </a>
+                            <a href="#" onclick="setActiveNav(this, 'Riwayat Transaksi')" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium hover:bg-slate-800/60 hover:text-white transition">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
+                                Riwayat Transaksi
+                            </a>
+                        </nav>
+                    </div>
+
+                    <div>
+                        <p class="px-3 text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">Laporan</p>
+                        <nav class="space-y-1">
+                            <a href="#" onclick="setActiveNav(this, 'Rekap Per Kelas')" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium hover:bg-slate-800/60 hover:text-white transition">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                                Rekap Per Kelas
+                            </a>
+                            <a href="#" onclick="setActiveNav(this, 'Log Aktivitas')" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium hover:bg-slate-800/60 hover:text-white transition">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                Log Aktivitas
+                            </a>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Admin Profile Footer Widget -->
+            <div class="p-4 border-t border-slate-800/80 bg-slate-900/40">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-9 h-9 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold text-sm" id="admin-avatar-initial">A</div>
+                        <div class="overflow-hidden">
+                            <h4 id="admin-name-display" class="text-xs font-bold text-white truncate">Administrator</h4>
+                            <p id="admin-email-display" class="text-[11px] text-slate-400 truncate">admin@tabungan.com</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- KONTEN UTAMA KANAN -->
+        <div class="flex-1 flex flex-col h-screen overflow-hidden">
+            
+            <!-- TOP BAR -->
+            <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 z-10 shrink-0">
+                <div class="flex items-center gap-4 flex-1">
+                    <h2 id="page-title-header" class="text-lg font-bold text-slate-800">Dashboard</h2>
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <!-- Notification Dropdown Toggle -->
+                    <div class="relative">
+                        <button onclick="toggleNotificationDropdown()" class="p-2 text-slate-600 hover:bg-slate-100 rounded-xl relative transition">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+                            <span id="notif-badge" class="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full"></span>
+                        </button>
+                        
+                        <!-- Dropdown Menu Log Aktivitas -->
+                        <div id="notification-dropdown" class="hidden absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-xl border border-slate-100 py-3 z-50">
+                            <div class="px-4 pb-2 border-b border-slate-100 flex items-center justify-between">
+                                <h3 class="text-xs font-bold uppercase tracking-wider text-slate-700">Notifikasi & Aktivitas</h3>
+                                <span class="text-[10px] bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-semibold">Terbaru</span>
+                            </div>
+                            <div id="dropdown-log-list" class="max-h-64 overflow-y-auto divide-y divide-slate-50">
+                                <!-- Render via JS -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Menu akun profil -->
+                    <div class="relative border-l border-slate-200 pl-3">
+                        <button id="profile-menu-button" type="button" onclick="toggleProfileMenu()" aria-haspopup="true" aria-expanded="false" aria-controls="profile-menu" class="flex items-center gap-2 rounded-lg p-1.5 text-left hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-200">
+                            <span class="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-xs" id="topbar-avatar">A</span>
+                            <span id="topbar-username" class="text-xs font-semibold text-slate-700 hidden md:inline">Administrator</span>
+                            <svg class="hidden h-4 w-4 text-slate-500 md:block" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m6 9 6 6 6-6"/></svg>
+                        </button>
+                        <div id="profile-menu" role="menu" aria-labelledby="profile-menu-button" class="hidden absolute right-0 mt-2 w-64 overflow-hidden rounded-xl border border-slate-200 bg-white py-2 shadow-lg z-50">
+                            <div class="border-b border-slate-100 px-4 py-3">
+                                <p id="profile-menu-name" class="truncate text-sm font-semibold text-slate-800">Administrator</p>
+                                <p id="profile-menu-email" class="truncate text-xs text-slate-500">admin@tabungan.com</p>
+                            </div>
+                            <button type="button" role="menuitem" onclick="openAccountSettings()" class="w-full px-4 py-2.5 text-left text-sm text-slate-700 hover:bg-slate-50">Pengaturan</button>
+                            <button type="button" role="menuitem" onclick="startAddAccount()" class="w-full px-4 py-2.5 text-left text-sm text-slate-700 hover:bg-slate-50">Tambah akun Gmail</button>
+                            <button type="button" role="menuitem" onclick="logoutSession()" class="w-full border-t border-slate-100 px-4 py-2.5 text-left text-sm font-semibold text-rose-600 hover:bg-rose-50">Keluar akun</button>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- SCROLLABLE DASHBOARD CONTENT -->
+            <div class="flex-1 overflow-y-auto p-6 space-y-6">
+                
+                <!-- Ringkasan keuangan -->
+                <section aria-label="Ringkasan keuangan" class="max-w-3xl">
+                <div class="mb-3">
+                    <h3 class="text-base font-bold text-slate-800">Ringkasan Keuangan</h3>
+                </div>
+                <div class="grid grid-cols-1 gap-3">
+                    
+                    <!-- 1. Total Siswa -->
+                    <div class="hidden bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Siswa</p>
+                            <h3 id="stat-total-siswa" class="text-xl font-bold text-slate-900 mt-1">3</h3>
+                        </div>
+                        <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                        </div>
+                    </div>
+
+                    <!-- 2. Total Saldo Tabungan (Editable) -->
+                    <div class="relative order-3 bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                        <div class="pr-12">
+                            <p class="text-sm font-medium text-slate-500">
+                                SISA SALDO TABUNGAN
+                            </p>
+                            <div class="mt-3">
+                                <p id="stat-total-saldo-text" class="text-xl font-bold text-slate-900">Rp 1.050.000</p>
+                            </div>
+                        </div>
+                        <div class="absolute top-5 right-5 w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+                        </div>
+                    </div>
+
+                    <!-- 3. Total Setoran (Editable) -->
+                    <div class="relative order-1 bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                        <div class="pr-12">
+                            <p class="text-sm font-medium text-slate-500">
+                                TOTAL PEMASUKAN
+                            </p>
+                            <div class="mt-3">
+                                <p id="stat-total-setoran-text" class="text-xl font-bold text-slate-900">Rp 1.200.000</p>
+                            </div>
+                        </div>
+                        <div class="absolute top-5 right-5 w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        </div>
+                    </div>
+
+                    <!-- 4. Total Penarikan (Editable) -->
+                    <div class="relative order-2 bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                        <div class="pr-12">
+                            <p class="text-sm font-medium text-slate-500">
+                                TOTAL PENGELUARAN
+                            </p>
+                            <div class="mt-3">
+                                <p id="stat-total-penarikan-text" class="text-xl font-bold text-slate-900">Rp 150.000</p>
+                            </div>
+                        </div>
+                        <div class="absolute top-5 right-5 w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        </div>
+                    </div>
+
+                    <!-- 5. Jumlah Transaksi -->
+                    <div class="hidden bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Jumlah Transaksi</p>
+                            <h3 id="stat-jumlah-transaksi" class="text-xl font-bold text-slate-900 mt-1">5</h3>
+                        </div>
+                        <div class="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
+                        </div>
+                    </div>
+
+                </div>
+                </section>
+
+                <!-- FORM TAMBAH TRANSAKSI -->
+                <section id="transaction-entry" class="max-w-3xl rounded-xl border border-slate-200 bg-white p-5">
+                    <div class="mb-4">
+                        <h3 class="text-base font-bold text-slate-900">Tambah Transaksi Baru</h3>
+                        <p class="mt-1 text-xs text-slate-500">Catat pemasukan atau pengeluaran tabungan.</p>
+                    </div>
+                    <form id="transaction-form" onsubmit="submitTransaction(event)" class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <input type="hidden" id="trans-edit-id">
+                        <div>
+                            <label for="trans-amount" class="mb-1 block text-xs font-semibold text-slate-600">Jumlah uang (Rp)</label>
+                            <input type="text" inputmode="numeric" id="trans-amount" required placeholder="Contoh: 50000" oninput="formatRupiahInput(this)" class="w-full rounded-lg border border-slate-200 px-4 py-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100">
+                        </div>
+                        <div>
+                            <label for="trans-date" class="mb-1 block text-xs font-semibold text-slate-600">Tanggal</label>
+                            <input type="date" id="trans-date" required class="w-full rounded-lg border border-slate-200 px-4 py-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100">
+                        </div>
+                        <div>
+                            <label for="trans-type" class="mb-1 block text-xs font-semibold text-slate-600">Kategori</label>
+                            <select id="trans-type" required class="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100">
+                                <option value="pemasukan">Pemasukan</option>
+                                <option value="pengeluaran">Pengeluaran</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="trans-description" class="mb-1 block text-xs font-semibold text-slate-600">Deskripsi</label>
+                            <input type="text" id="trans-description" required maxlength="120" placeholder="Contoh: Tabungan mingguan" class="w-full rounded-lg border border-slate-200 px-4 py-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100">
+                        </div>
+                        <div class="flex gap-2 sm:col-span-2">
+                            <button type="submit" id="trans-submit-btn" class="rounded-lg bg-indigo-600 px-5 py-3 text-sm font-semibold text-white hover:bg-indigo-700">Kirim Transaksi</button>
+                            <button type="button" id="trans-cancel-edit" onclick="cancelTransactionEdit()" class="hidden rounded-lg border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50">Batal edit</button>
+                        </div>
+                    </form>
+                </section>
+
+                <!-- RIWAYAT TRANSAKSI -->
+                <section class="max-w-5xl rounded-xl border border-slate-200 bg-white overflow-hidden">
+                    <div class="border-b border-slate-200 p-5">
+                        <h3 class="text-base font-bold text-slate-900">Riwayat Transaksi</h3>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="border-b border-slate-200 bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                                    <th class="px-5 py-3">Tanggal</th>
+                                    <th class="px-5 py-3">Kategori</th>
+                                    <th class="px-5 py-3">Deskripsi</th>
+                                    <th class="px-5 py-3 text-right">Jumlah</th>
+                                    <th class="px-5 py-3 text-right">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="transaction-table-body" class="divide-y divide-slate-100 text-sm text-slate-700">
+                                <!-- Render via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                    </section>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <div id="account-settings-modal" class="hidden fixed inset-0 z-50 items-center justify-center bg-slate-900/30 p-4" role="dialog" aria-modal="true" aria-labelledby="account-settings-title">
+        <section class="w-full max-w-md rounded-xl border border-slate-200 bg-white p-6 shadow-xl">
+            <div class="flex items-start justify-between gap-4">
+                <div>
+                    <h2 id="account-settings-title" class="text-lg font-bold text-slate-900">Pengaturan</h2>
+                    <p class="mt-1 text-sm text-slate-500">Ubah nama akun dan atur notifikasi.</p>
+                </div>
+                <button type="button" onclick="closeAccountSettings()" aria-label="Tutup pengaturan" class="rounded-lg p-2 text-slate-500 hover:bg-slate-100">✕</button>
+            </div>
+            <form id="account-settings-form" onsubmit="saveAccountSettings(event)" class="mt-5 space-y-4">
+                <div>
+                    <label for="account-settings-name" class="mb-1 block text-sm font-medium text-slate-700">Nama akun</label>
+                    <input id="account-settings-name" type="text" maxlength="80" required class="w-full rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100">
+                </div>
+                <button type="submit" class="w-full rounded-lg bg-indigo-600 px-4 py-3 text-sm font-semibold text-white hover:bg-indigo-700">Simpan nama</button>
+            </form>
+            <div class="mt-5 flex items-center justify-between gap-4 rounded-lg border border-slate-200 p-4">
+                <div>
+                    <p class="text-sm font-semibold text-slate-800">Suara notifikasi</p>
+                    <p class="mt-1 text-xs text-slate-500">Putar bunyi saat aplikasi menampilkan notifikasi.</p>
+                </div>
+                <button id="notification-sound-toggle" type="button" onclick="toggleNotificationSound()" aria-pressed="false" class="shrink-0 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50">Suara notif: mati</button>
+            </div>
+        </section>
+    </div>
+
+    <!-- JavaScript Files -->
+    <script src="app.js"></script>
+</body>
+</html>
