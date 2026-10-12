@@ -20,6 +20,11 @@ const LEGACY_DEMO_TRANSACTIONS = [
     { id: "TRX-005", student: "Siti Aminah (VIIB)", date: "2026-10-14 11:45", type: "Setoran", amount: 500000, status: "Berhasil" }
 ];
 let addingAccountFromProfile = false;
+let isBalanceHidden = false;
+let hiddenAt = null;
+let isDashboardLocked = false;
+const AUTO_LOCK_DELAY_MS = 30_000;
+const PIN_HASH_ITERATIONS = 150_000;
 
 function clearUnmodifiedDemoData(users) {
     const demoAccount = users.find(user =>
@@ -109,6 +114,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const soundEnabled = localStorage.getItem('tabungan_notification_sound') === 'true';
     updateNotificationSoundButton(soundEnabled);
 
+    document.addEventListener('visibilitychange', handleVisibilityChange);
     document.addEventListener('click', event => {
         const profileMenu = document.getElementById('profile-menu');
         const profileButton = document.getElementById('profile-menu-button');
@@ -131,6 +137,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // --- AUTHENTICATION & NAVIGATION ---
 function switchAuthView(view) {
+    if (view === 'login' && addingAccountFromProfile && getCurrentUserSession()) {
+        cancelAddAccount();
+        return;
+    }
+
     const pages = {
         login: document.getElementById('login-page'),
         register: document.getElementById('register-page'),
@@ -139,7 +150,14 @@ function switchAuthView(view) {
     };
     Object.values(pages).forEach(page => page.classList.add('hidden'));
     if (pages[view]) pages[view].classList.remove('hidden');
-    if (view !== 'register') addingAccountFromProfile = false;
+    if (view !== 'register') {
+        addingAccountFromProfile = false;
+        document.getElementById('cancel-add-account-button').classList.add('hidden');
+        document.getElementById('register-account-context').classList.add('hidden');
+    } else if (!addingAccountFromProfile) {
+        document.getElementById('cancel-add-account-button').classList.add('hidden');
+        document.getElementById('register-account-context').classList.add('hidden');
+    }
     if (view === 'forgot') {
         document.getElementById('forgot-email').value = document.getElementById('login-email').value.trim();
     }
@@ -263,7 +281,6 @@ document.getElementById('register-form').addEventListener('submit', (e) => {
 
     const users = getRegisteredUsers();
     if (users.some(u => u.email.toLowerCase() === email)) {
-        addingAccountFromProfile = false;
         showToast("Email sudah terdaftar di sistem!", "error");
         return;
     }
@@ -284,6 +301,8 @@ document.getElementById('register-form').addEventListener('submit', (e) => {
 
     if (addingAccountFromProfile) {
         addingAccountFromProfile = false;
+        document.getElementById('cancel-add-account-button').classList.add('hidden');
+        document.getElementById('register-account-context').classList.add('hidden');
         setCurrentUserSession(email);
         document.getElementById('register-form').reset();
         showDashboardView();
@@ -300,7 +319,11 @@ document.getElementById('register-form').addEventListener('submit', (e) => {
 
 function logoutSession() {
     localStorage.removeItem('tabungan_current_user');
+    hiddenAt = null;
+    isDashboardLocked = false;
     document.getElementById('dashboard-app').classList.add('hidden');
+    document.getElementById('security-lock-screen').classList.add('hidden');
+    document.getElementById('security-lock-screen').classList.remove('flex');
     document.getElementById('login-page').classList.remove('hidden');
     document.getElementById('login-form').reset();
     switchAuthView('login');
@@ -327,10 +350,36 @@ function closeProfileMenu() {
 
 function openAccountSettings() {
     closeProfileMenu();
-    document.getElementById('account-settings-name').value = getActiveUserData().name;
+    const user = getActiveUserData();
+    document.getElementById('account-settings-name').value = user.name;
+    document.getElementById('account-settings-photo').value = '';
+    document.getElementById('security-current-pin').value = '';
+    document.getElementById('security-new-pin').value = '';
+    document.getElementById('security-confirm-pin').value = '';
+    const hasPin = Boolean(user.securityPin && user.securityPin.salt && user.securityPin.hash);
+    document.getElementById('security-current-pin-container').classList.toggle('hidden', !hasPin);
+    document.getElementById('security-pin-status').textContent = hasPin
+        ? 'PIN sudah aktif. Masukkan PIN saat ini untuk menggantinya.'
+        : 'Atur PIN 6-12 digit untuk mengaktifkan penguncian setelah 30 detik.';
+    renderSettingsPhoto(user);
     const modal = document.getElementById('account-settings-modal');
     modal.classList.remove('hidden');
     modal.classList.add('flex');
+}
+
+function renderSettingsPhoto(user) {
+    const preview = document.getElementById('account-settings-photo-preview');
+    const initial = document.getElementById('account-settings-photo-initial');
+    if (user.profileImage) {
+        preview.src = user.profileImage;
+        preview.classList.remove('hidden');
+        initial.classList.add('hidden');
+    } else {
+        preview.removeAttribute('src');
+        preview.classList.add('hidden');
+        initial.textContent = user.name.charAt(0).toUpperCase();
+        initial.classList.remove('hidden');
+    }
 }
 
 function saveAccountSettings(event) {
@@ -350,6 +399,124 @@ function saveAccountSettings(event) {
     showToast('Nama akun berhasil disimpan.', 'success');
 }
 
+async function saveProfilePhoto(event) {
+    const input = event.currentTarget;
+    const file = input.files && input.files[0];
+    if (!file) return;
+    if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
+        showToast('Pilih foto berformat PNG, JPEG, atau WebP.', 'error');
+        input.value = '';
+        return;
+    }
+    if (file.size > 1024 * 1024) {
+        showToast('Ukuran foto maksimal 1 MB.', 'error');
+        input.value = '';
+        return;
+    }
+
+    try {
+        const profileImage = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+                if (typeof reader.result !== 'string') {
+                    reject(new Error('File foto tidak dapat dibaca.'));
+                    return;
+                }
+                resolve(reader.result);
+            };
+            reader.onerror = () => reject(new Error('Gagal membaca file foto profil.'));
+            reader.readAsDataURL(file);
+        });
+        const user = getActiveUserData();
+        user.profileImage = profileImage;
+        saveActiveUserData(user);
+        renderDashboardData();
+        renderSettingsPhoto(user);
+        showToast('Foto profil berhasil diperbarui.', 'success');
+    } catch (error) {
+        console.error('Gagal menyimpan foto profil:', error);
+        showToast(error.message || 'Foto profil gagal disimpan.', 'error');
+        input.value = '';
+    }
+}
+
+function bytesToHex(bytes) {
+    return Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('');
+}
+
+async function hashSecurityPin(pin, salt) {
+    if (!window.crypto || !window.crypto.subtle) {
+        throw new Error('Browser ini tidak mendukung penyimpanan PIN yang aman. Jalankan melalui HTTPS atau localhost.');
+    }
+    const keyMaterial = await window.crypto.subtle.importKey(
+        'raw',
+        new TextEncoder().encode(pin),
+        'PBKDF2',
+        false,
+        ['deriveBits']
+    );
+    const derivedBits = await window.crypto.subtle.deriveBits({
+        name: 'PBKDF2',
+        salt: new TextEncoder().encode(salt),
+        iterations: PIN_HASH_ITERATIONS,
+        hash: 'SHA-256'
+    }, keyMaterial, 256);
+    return bytesToHex(new Uint8Array(derivedBits));
+}
+
+function constantTimeEqual(left, right) {
+    if (left.length !== right.length) return false;
+    let difference = 0;
+    for (let index = 0; index < left.length; index += 1) {
+        difference |= left.charCodeAt(index) ^ right.charCodeAt(index);
+    }
+    return difference === 0;
+}
+
+async function verifySecurityPin(user, pin) {
+    if (!user.securityPin || !user.securityPin.salt || !user.securityPin.hash) return false;
+    const candidateHash = await hashSecurityPin(pin, user.securityPin.salt);
+    return constantTimeEqual(candidateHash, user.securityPin.hash);
+}
+
+async function saveSecurityPin() {
+    const user = getActiveUserData();
+    const currentPin = document.getElementById('security-current-pin').value;
+    const newPin = document.getElementById('security-new-pin').value;
+    const confirmation = document.getElementById('security-confirm-pin').value;
+    const hasPin = Boolean(user.securityPin && user.securityPin.salt && user.securityPin.hash);
+
+    if (!/^\d{6,12}$/.test(newPin)) {
+        showToast('PIN harus terdiri dari 6-12 angka.', 'error');
+        return;
+    }
+    if (newPin !== confirmation) {
+        showToast('Konfirmasi PIN tidak sama.', 'error');
+        return;
+    }
+
+    try {
+        if (hasPin && !(await verifySecurityPin(user, currentPin))) {
+            showToast('PIN saat ini salah.', 'error');
+            return;
+        }
+        const saltBytes = window.crypto.getRandomValues(new Uint8Array(16));
+        const salt = bytesToHex(saltBytes);
+        user.securityPin = { salt, hash: await hashSecurityPin(newPin, salt) };
+        saveActiveUserData(user);
+        document.getElementById('security-current-pin').value = '';
+        document.getElementById('security-new-pin').value = '';
+        document.getElementById('security-confirm-pin').value = '';
+        document.getElementById('security-current-pin-container').classList.remove('hidden');
+        document.getElementById('security-pin-status').textContent = 'PIN Auto-Lock aktif. Dashboard akan terkunci setelah tidak aktif selama 30 detik.';
+        addLogActivity('PIN Auto-Lock diperbarui');
+        showToast('PIN Auto-Lock berhasil disimpan.', 'success');
+    } catch (error) {
+        console.error('Gagal menyimpan PIN Auto-Lock:', error);
+        showToast(error.message || 'PIN gagal disimpan.', 'error');
+    }
+}
+
 function closeAccountSettings() {
     const modal = document.getElementById('account-settings-modal');
     if (!modal) return;
@@ -359,21 +526,98 @@ function closeAccountSettings() {
 
 function startAddAccount() {
     addingAccountFromProfile = true;
-    localStorage.removeItem('tabungan_current_user');
-    document.getElementById('dashboard-app').classList.add('hidden');
     document.getElementById('register-form').reset();
+    document.getElementById('cancel-add-account-button').classList.remove('hidden');
+    document.getElementById('register-account-context').classList.remove('hidden');
     closeProfileMenu();
     switchAuthView('register');
     document.getElementById('reg-name').focus();
+}
+
+function cancelAddAccount() {
+    const currentUser = getCurrentUserSession();
+    const isCurrentUserRegistered = currentUser &&
+        getRegisteredUsers().some(user => user.email === currentUser);
+
+    addingAccountFromProfile = false;
+    document.getElementById('cancel-add-account-button').classList.add('hidden');
+    document.getElementById('register-form').reset();
+    if (isCurrentUserRegistered) {
+        showDashboardView();
+        showToast('Penambahan akun dibatalkan. Anda tetap masuk dengan akun saat ini.', 'info');
+        return;
+    }
+
+    switchAuthView('login');
 }
 
 function showDashboardView() {
     ['login-page', 'register-page', 'forgot-page', 'reset-page'].forEach(id => {
         document.getElementById(id).classList.add('hidden');
     });
+    hiddenAt = null;
+    isDashboardLocked = false;
     document.getElementById('dashboard-app').classList.remove('hidden');
     
     renderDashboardData();
+}
+
+function handleVisibilityChange() {
+    const dashboard = document.getElementById('dashboard-app');
+    if (document.hidden) {
+        if (getCurrentUserSession() && !dashboard.classList.contains('hidden')) {
+            hiddenAt = Date.now();
+        }
+        return;
+    }
+
+    if (hiddenAt === null) return;
+    const awayDuration = Date.now() - hiddenAt;
+    hiddenAt = null;
+    if (awayDuration < AUTO_LOCK_DELAY_MS || isDashboardLocked ||
+        dashboard.classList.contains('hidden') || !getCurrentUserSession()) return;
+
+    const user = getActiveUserData();
+    if (!user.securityPin || !user.securityPin.salt || !user.securityPin.hash) {
+        showToast('Atur PIN Auto-Lock di Pengaturan untuk mengunci dashboard setelah 30 detik.', 'info');
+        return;
+    }
+    showSecurityLockScreen();
+}
+
+function showSecurityLockScreen() {
+    isDashboardLocked = true;
+    const lockScreen = document.getElementById('security-lock-screen');
+    document.getElementById('security-unlock-pin').value = '';
+    document.getElementById('security-lock-error').classList.add('hidden');
+    lockScreen.classList.remove('hidden');
+    lockScreen.classList.add('flex');
+    document.getElementById('security-unlock-pin').focus();
+}
+
+async function unlockDashboard(event) {
+    event.preventDefault();
+    const pinInput = document.getElementById('security-unlock-pin');
+    const errorMessage = document.getElementById('security-lock-error');
+    try {
+        if (!(await verifySecurityPin(getActiveUserData(), pinInput.value))) {
+            errorMessage.textContent = 'PIN salah. Silakan coba lagi.';
+            errorMessage.classList.remove('hidden');
+            pinInput.select();
+            return;
+        }
+        isDashboardLocked = false;
+        const lockScreen = document.getElementById('security-lock-screen');
+        lockScreen.classList.add('hidden');
+        lockScreen.classList.remove('flex');
+        pinInput.value = '';
+        hiddenAt = null;
+        addLogActivity('Dashboard dibuka dengan PIN Auto-Lock');
+    } catch (error) {
+        console.error('Gagal memverifikasi PIN Auto-Lock:', error);
+        errorMessage.textContent = error.message || 'PIN tidak dapat diverifikasi di browser ini.';
+        errorMessage.classList.remove('hidden');
+    }
 }
 
 function setActiveNav(element, titleName) {
@@ -401,6 +645,25 @@ function formatRupiah(number) {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(number);
 }
 
+function renderProfileAvatar(element, user) {
+    if (user.profileImage) {
+        element.textContent = '';
+        element.style.backgroundImage = `url("${user.profileImage}")`;
+        element.style.backgroundSize = 'cover';
+        element.style.backgroundPosition = 'center';
+        return;
+    }
+    element.style.backgroundImage = '';
+    element.style.backgroundSize = '';
+    element.style.backgroundPosition = '';
+    element.textContent = user.name.charAt(0).toUpperCase();
+}
+
+function toggleBalanceVisibility() {
+    isBalanceHidden = !isBalanceHidden;
+    renderDashboardData();
+}
+
 function renderDashboardData() {
     const user = setActiveUserDataGlobal();
     if (!user) return;
@@ -408,16 +671,23 @@ function renderDashboardData() {
     // Update Profile Info
     document.getElementById('admin-name-display').innerText = user.name;
     document.getElementById('admin-email-display').innerText = user.email;
-    document.getElementById('admin-avatar-initial').innerText = user.name.charAt(0).toUpperCase();
+    renderProfileAvatar(document.getElementById('admin-avatar-initial'), user);
     document.getElementById('topbar-username').innerText = user.name;
-    document.getElementById('topbar-avatar').innerText = user.name.charAt(0).toUpperCase();
+    renderProfileAvatar(document.getElementById('topbar-avatar'), user);
     document.getElementById('profile-menu-name').innerText = user.name;
     document.getElementById('profile-menu-email').innerText = user.email;
 
     // Update Statistics Cards
-    document.getElementById('stat-total-saldo-text').innerText = formatRupiah(user.saldo);
-    document.getElementById('stat-total-setoran-text').innerText = formatRupiah(user.setoran);
-    document.getElementById('stat-total-penarikan-text').innerText = formatRupiah(user.penarikan);
+    const displayBalance = value => isBalanceHidden ? 'Rp ••••••' : formatRupiah(value);
+    document.getElementById('stat-total-saldo-text').innerText = displayBalance(user.saldo);
+    document.getElementById('stat-total-setoran-text').innerText = displayBalance(user.setoran);
+    document.getElementById('stat-total-penarikan-text').innerText = displayBalance(user.penarikan);
+    document.getElementById('balance-eye-icon').classList.toggle('hidden', isBalanceHidden);
+    document.getElementById('balance-eye-off-icon').classList.toggle('hidden', !isBalanceHidden);
+    const visibilityButton = document.getElementById('balance-visibility-toggle');
+    visibilityButton.setAttribute('aria-pressed', String(isBalanceHidden));
+    visibilityButton.setAttribute('aria-label', `${isBalanceHidden ? 'Tampilkan' : 'Sembunyikan'} nominal saldo`);
+    visibilityButton.title = `${isBalanceHidden ? 'Tampilkan' : 'Sembunyikan'} nominal saldo`;
 
     // Render Transaction Table
     const tbody = document.getElementById('transaction-table-body');

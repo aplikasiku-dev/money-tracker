@@ -103,6 +103,7 @@
                 </div>
                 <h1 class="text-2xl font-bold text-slate-900">Buat Akun Baru</h1>
                 <p class="text-sm text-slate-500 mt-1">Daftarkan akun administrator sistem tabungan</p>
+                <p id="register-account-context" class="hidden mt-3 rounded-lg bg-indigo-50 p-3 text-xs leading-relaxed text-indigo-700">Akun yang sedang digunakan tetap tersimpan. Akun baru akan menjadi akun aktif setelah pendaftaran berhasil.</p>
             </div>
 
             <form id="register-form" class="space-y-4">
@@ -129,6 +130,7 @@
             <div class="mt-6 text-center text-sm text-slate-500">
                 Sudah punya akun? <a href="#" onclick="switchAuthView('login')" class="text-indigo-600 font-semibold hover:underline">Masuk di sini</a>
             </div>
+            <button id="cancel-add-account-button" type="button" onclick="cancelAddAccount()" class="hidden mt-4 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">Batal, kembali ke akun saat ini</button>
         </div>
     </section>
 
@@ -231,6 +233,10 @@
             <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 z-10 shrink-0">
                 <div class="flex items-center gap-4 flex-1">
                     <h2 id="page-title-header" class="text-lg font-bold text-slate-800">Dashboard</h2>
+                    <button id="balance-visibility-toggle" type="button" onclick="toggleBalanceVisibility()" aria-label="Sembunyikan nominal saldo" aria-pressed="false" title="Sembunyikan nominal saldo" class="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-200">
+                        <svg id="balance-eye-icon" class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/><circle cx="12" cy="12" r="3" stroke-width="2"/></svg>
+                        <svg id="balance-eye-off-icon" class="hidden h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3l18 18M10.585 10.587a2 2 0 002.828 2.828M9.88 5.09A10.94 10.94 0 0112 5c4.478 0 8.268 2.943 9.542 7a10.94 10.94 0 01-3.02 4.31M6.23 6.23A10.94 10.94 0 002.458 12c1.274 4.057 5.064 7 9.542 7 1.35 0 2.64-.28 3.8-.78"/></svg>
+                    </button>
                 </div>
 
                 <div class="flex items-center gap-3">
@@ -415,12 +421,12 @@
         </div>
     </main>
 
-    <div id="account-settings-modal" class="hidden fixed inset-0 z-50 items-center justify-center bg-slate-900/30 p-4" role="dialog" aria-modal="true" aria-labelledby="account-settings-title">
-        <section class="w-full max-w-md rounded-xl border border-slate-200 bg-white p-6 shadow-xl">
+    <div id="account-settings-modal" class="hidden fixed inset-0 z-50 items-center justify-center overflow-y-auto bg-slate-900/30 p-4" role="dialog" aria-modal="true" aria-labelledby="account-settings-title">
+        <section class="my-auto w-full max-w-lg rounded-xl border border-slate-200 bg-white p-6 shadow-xl">
             <div class="flex items-start justify-between gap-4">
                 <div>
                     <h2 id="account-settings-title" class="text-lg font-bold text-slate-900">Pengaturan</h2>
-                    <p class="mt-1 text-sm text-slate-500">Ubah nama akun dan atur notifikasi.</p>
+                    <p class="mt-1 text-sm text-slate-500">Ubah profil, keamanan, dan notifikasi akun.</p>
                 </div>
                 <button type="button" onclick="closeAccountSettings()" aria-label="Tutup pengaturan" class="rounded-lg p-2 text-slate-500 hover:bg-slate-100">✕</button>
             </div>
@@ -429,8 +435,37 @@
                     <label for="account-settings-name" class="mb-1 block text-sm font-medium text-slate-700">Nama akun</label>
                     <input id="account-settings-name" type="text" maxlength="80" required class="w-full rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100">
                 </div>
+                <div>
+                    <label for="account-settings-photo" class="mb-1 block text-sm font-medium text-slate-700">Foto profil</label>
+                    <div class="flex items-center gap-3">
+                        <img id="account-settings-photo-preview" alt="Pratinjau foto profil" class="hidden h-12 w-12 rounded-full object-cover">
+                        <div id="account-settings-photo-initial" class="flex h-12 w-12 items-center justify-center rounded-full bg-indigo-600 text-sm font-bold text-white">A</div>
+                        <input id="account-settings-photo" type="file" accept="image/png,image/jpeg,image/webp" onchange="saveProfilePhoto(event)" class="min-w-0 flex-1 text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-indigo-50 file:px-3 file:py-2 file:text-xs file:font-semibold file:text-indigo-700 hover:file:bg-indigo-100">
+                    </div>
+                    <p class="mt-1 text-xs text-slate-500">Pilih gambar maksimal 1 MB. Foto disimpan di browser ini.</p>
+                </div>
                 <button type="submit" class="w-full rounded-lg bg-indigo-600 px-4 py-3 text-sm font-semibold text-white hover:bg-indigo-700">Simpan nama</button>
             </form>
+            <div class="mt-5 space-y-3 rounded-lg border border-slate-200 p-4">
+                <div>
+                    <p class="text-sm font-semibold text-slate-800">PIN Auto-Lock</p>
+                    <p id="security-pin-status" class="mt-1 text-xs text-slate-500">Atur PIN 6-12 digit untuk mengaktifkan penguncian setelah 30 detik.</p>
+                </div>
+                <div id="security-current-pin-container" class="hidden">
+                    <label for="security-current-pin" class="mb-1 block text-xs font-medium text-slate-600">PIN saat ini</label>
+                    <input id="security-current-pin" type="password" inputmode="numeric" autocomplete="current-password" maxlength="12" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100">
+                </div>
+                <div>
+                    <label for="security-new-pin" class="mb-1 block text-xs font-medium text-slate-600">PIN baru</label>
+                    <input id="security-new-pin" type="password" inputmode="numeric" autocomplete="new-password" maxlength="12" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100">
+                </div>
+                <div>
+                    <label for="security-confirm-pin" class="mb-1 block text-xs font-medium text-slate-600">Konfirmasi PIN baru</label>
+                    <input id="security-confirm-pin" type="password" inputmode="numeric" autocomplete="new-password" maxlength="12" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100">
+                </div>
+                <button type="button" onclick="saveSecurityPin()" class="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">Simpan PIN Auto-Lock</button>
+                <p class="text-xs leading-relaxed text-amber-700">PIN disimpan sebagai hash di browser. Ini membantu privasi layar, tetapi bukan pengganti autentikasi server untuk data sensitif.</p>
+            </div>
             <div class="mt-5 flex items-center justify-between gap-4 rounded-lg border border-slate-200 p-4">
                 <div>
                     <p class="text-sm font-semibold text-slate-800">Suara notifikasi</p>
@@ -438,6 +473,21 @@
                 </div>
                 <button id="notification-sound-toggle" type="button" onclick="toggleNotificationSound()" aria-pressed="false" class="shrink-0 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50">Suara notif: mati</button>
             </div>
+        </section>
+    </div>
+
+    <div id="security-lock-screen" class="hidden fixed inset-0 z-[100] items-center justify-center bg-slate-950 px-5 py-8 text-white" role="dialog" aria-modal="true" aria-labelledby="security-lock-title">
+        <section class="w-full max-w-sm rounded-2xl border border-slate-700 bg-slate-900 p-7 shadow-2xl">
+            <div class="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-500/15 text-indigo-300">
+                <svg class="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2" stroke-width="2"/><path stroke-linecap="round" stroke-width="2" d="M8 10V7a4 4 0 118 0v3m-4 5v2"/></svg>
+            </div>
+            <h2 id="security-lock-title" class="text-center text-xl font-bold">Dashboard terkunci</h2>
+            <p id="security-lock-description" class="mt-2 text-center text-sm text-slate-400">Masukkan PIN untuk melanjutkan ke dashboard.</p>
+            <form class="mt-6 space-y-4" onsubmit="unlockDashboard(event)">
+                <input id="security-unlock-pin" type="password" inputmode="numeric" autocomplete="current-password" maxlength="12" required aria-label="PIN keamanan" placeholder="Masukkan PIN 6-12 digit" class="w-full rounded-lg border border-slate-700 bg-slate-800 px-4 py-3 text-center text-lg tracking-[0.35em] text-white outline-none placeholder:text-sm placeholder:tracking-normal focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/30">
+                <p id="security-lock-error" class="hidden text-center text-sm text-rose-400" role="alert"></p>
+                <button type="submit" class="w-full rounded-lg bg-indigo-500 px-4 py-3 text-sm font-semibold text-white hover:bg-indigo-400">Buka Dashboard</button>
+            </form>
         </section>
     </div>
 
