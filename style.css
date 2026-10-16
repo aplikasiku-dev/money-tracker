@@ -42,11 +42,126 @@ body {
     animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+.calculator-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 70;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    background: rgba(0, 0, 0, 0.72);
+    backdrop-filter: blur(6px);
+}
+
+.calculator-overlay.hidden {
+    display: none;
+}
+
+.calculator-panel {
+    width: min(100%, 360px);
+    padding: clamp(16px, 5vw, 24px);
+    border: 1px solid #374151;
+    border-radius: 28px;
+    background: #111827;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+}
+
+.calculator-close {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #1f2937;
+    color: #d1d5db;
+    font-size: 26px;
+    line-height: 1;
+}
+
+.calculator-screen {
+    min-width: 0;
+    min-height: 112px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: flex-end;
+    overflow: hidden;
+    padding: 8px 4px 18px;
+}
+
+.calculator-expression {
+    min-height: 20px;
+    color: #9ca3af;
+    font-size: 14px;
+}
+
+.calculator-display {
+    width: 100%;
+    overflow: hidden;
+    color: #f9fafb;
+    font-size: clamp(36px, 12vw, 52px);
+    font-variant-numeric: tabular-nums;
+    font-weight: 500;
+    line-height: 1.15;
+    text-align: right;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.calculator-keys {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: clamp(8px, 2.5vw, 12px);
+}
+
+.calculator-key {
+    min-width: 0;
+    min-height: clamp(54px, 15vw, 68px);
+    border-radius: 50%;
+    background: #374151;
+    color: #f9fafb;
+    font-size: clamp(18px, 5vw, 22px);
+    font-weight: 600;
+    touch-action: manipulation;
+    transition: background-color 0.15s, transform 0.15s;
+}
+
+.calculator-key:hover {
+    background: #4b5563;
+}
+
+.calculator-key:active {
+    transform: scale(0.94);
+}
+
+.calculator-key-muted {
+    background: #9ca3af;
+    color: #111827;
+}
+
+.calculator-key-muted:hover {
+    background: #d1d5db;
+}
+
+.calculator-key-operator,
+.calculator-key-equals {
+    background: #6366f1;
+    color: white;
+}
+
+.calculator-key-operator:hover,
+.calculator-key-equals:hover {
+    background: #4f46e5;
+}
+
 /* Penyesuaian Responsif untuk Layar HP */
 @media (max-width: 640px) {
     div.max-w-\[440px\] {
         height: 100vh !important;
         border-radius: 0px !important;
         box-shadow: none !important;
+    }
+
+    .calculator-panel {
+        width: min(100%, 380px);
     }
 }

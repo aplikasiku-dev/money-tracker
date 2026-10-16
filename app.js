@@ -1,8 +1,51 @@
 // SIMULASI DATABASE & STATE MANAGEMENT
-let usersDB = JSON.parse(localStorage.getItem('fintech_users')) || [];
-let currentUser = JSON.parse(localStorage.getItem('fintech_current_user')) || null;
+let usersDB = JSON.parse(localStorage.getItem('fintech_users') || '[]');
+let currentUser = loadActiveUser();
 let isAuthRegisterMode = false;
 let isBalanceSensorHidden = false;
+let calculatorDisplayValue = '0';
+let calculatorStoredValue = null;
+let calculatorPendingOperator = null;
+let calculatorWaitingForOperand = false;
+
+function loadActiveUser() {
+    const savedSessionEmail = localStorage.getItem('sesiUserAktif');
+    const legacyUser = savedSessionEmail
+        ? null
+        : JSON.parse(localStorage.getItem('fintech_current_user') || 'null');
+    const activeEmail = savedSessionEmail || (legacyUser && legacyUser.email);
+
+    if (!activeEmail) {
+        return null;
+    }
+
+    let user = usersDB.find(u => u.email.toLowerCase() === activeEmail.toLowerCase());
+    if (!user && legacyUser) {
+        usersDB.push(legacyUser);
+        persistUsersDB();
+        user = legacyUser;
+    }
+
+    if (user) {
+        localStorage.setItem('sesiUserAktif', user.email);
+        localStorage.setItem('fintech_current_user', JSON.stringify(user));
+        return user;
+    }
+
+    localStorage.removeItem('sesiUserAktif');
+    localStorage.removeItem('fintech_current_user');
+    return null;
+}
+
+function persistUsersDB() {
+    localStorage.setItem('fintech_users', JSON.stringify(usersDB));
+}
+
+function setActiveSession(user) {
+    currentUser = user;
+    localStorage.setItem('sesiUserAktif', user.email);
+    localStorage.setItem('fintech_current_user', JSON.stringify(user));
+}
 
 // Inisialisasi Aplikasi saat DOM Siap
 document.addEventListener('DOMContentLoaded', () => {
@@ -21,10 +64,11 @@ function setupEventListeners() {
         const email = document.getElementById('loginEmail').value.trim();
         const password = document.getElementById('loginPassword').value.trim();
 
-        const user = usersDB.find(u => u.email === email && u.password === password);
+        const user = usersDB.find(u =>
+            u.email.toLowerCase() === email.toLowerCase() && u.password === password
+        );
         if (user) {
-            currentUser = user;
-            localStorage.setItem('fintech_current_user', JSON.stringify(currentUser));
+            setActiveSession(user);
             showMainDashboard();
         } else {
             alert("Email atau Kata Sandi salah!");
@@ -35,10 +79,10 @@ function setupEventListeners() {
     document.getElementById('registerForm').addEventListener('submit', (e) => {
         e.preventDefault();
         const name = document.getElementById('regName').value.trim();
-        const email = document.getElementById('regEmail').value.trim();
+        const email = document.getElementById('regEmail').value.trim().toLowerCase();
         const password = document.getElementById('regPassword').value.trim();
 
-        if (usersDB.some(u => u.email === email)) {
+        if (usersDB.some(u => u.email.toLowerCase() === email)) {
             alert("Email sudah terdaftar!");
             return;
         }
@@ -52,11 +96,21 @@ function setupEventListeners() {
         };
 
         usersDB.push(newUser);
-        localStorage.setItem('fintech_users', JSON.stringify(usersDB));
-
-        currentUser = newUser;
-        localStorage.setItem('fintech_current_user', JSON.stringify(currentUser));
+        persistUsersDB();
+        setActiveSession(newUser);
         showMainDashboard();
+    });
+
+    document.getElementById('calculatorModal').addEventListener('click', (e) => {
+        if (e.target === e.currentTarget) {
+            closeCalculator();
+        }
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !document.getElementById('calculatorModal').classList.contains('hidden')) {
+            closeCalculator();
+        }
     });
 }
 
@@ -123,6 +177,7 @@ function showMainDashboard() {
 
 function logoutUser() {
     currentUser = null;
+    localStorage.removeItem('sesiUserAktif');
     localStorage.removeItem('fintech_current_user');
     showAuthScreen();
 }
@@ -183,8 +238,118 @@ function openTransactionModal(type = 'expense') {
 }
 
 function closeTransactionModal() {
+    closeCalculator();
     document.getElementById('transactionModal').classList.add('hidden');
     document.getElementById('transactionForm').reset();
+}
+
+function openCalculator() {
+    const amountInput = document.getElementById('txAmount');
+    const initialValue = Number(amountInput.value);
+    calculatorDisplayValue = amountInput.value && Number.isFinite(initialValue)
+        ? String(initialValue)
+        : '0';
+    calculatorStoredValue = null;
+    calculatorPendingOperator = null;
+    calculatorWaitingForOperand = false;
+    updateCalculatorDisplay();
+    document.getElementById('calculatorModal').classList.remove('hidden');
+}
+
+function closeCalculator() {
+    document.getElementById('calculatorModal').classList.add('hidden');
+}
+
+function updateCalculatorDisplay() {
+    document.getElementById('calculatorDisplay').textContent = calculatorDisplayValue;
+    const expression = calculatorStoredValue !== null && calculatorPendingOperator
+        ? `${calculatorStoredValue} ${calculatorPendingOperator}`
+        : '';
+    document.getElementById('calculatorExpression').textContent = expression;
+}
+
+function formatCalculatorResult(value) {
+    if (!Number.isFinite(value)) {
+        return 'Error';
+    }
+    return String(Number(value.toPrecision(12)));
+}
+
+function calculateResult(left, right, operator) {
+    if (operator === '+') return left + right;
+    if (operator === '-') return left - right;
+    if (operator === '*') return left * right;
+    if (operator === '/') return right === 0 ? NaN : left / right;
+    return right;
+}
+
+function calculatorInput(key) {
+    if (key === 'AC') {
+        calculatorDisplayValue = '0';
+        calculatorStoredValue = null;
+        calculatorPendingOperator = null;
+        calculatorWaitingForOperand = false;
+    } else if (key === '⌫') {
+        if (!calculatorWaitingForOperand && calculatorDisplayValue !== 'Error') {
+            calculatorDisplayValue = calculatorDisplayValue.length > 1
+                ? calculatorDisplayValue.slice(0, -1)
+                : '0';
+            if (calculatorDisplayValue === '-') calculatorDisplayValue = '0';
+        }
+    } else if (key === '%') {
+        if (calculatorDisplayValue !== 'Error') {
+            calculatorDisplayValue = formatCalculatorResult(Number(calculatorDisplayValue) / 100);
+            calculatorWaitingForOperand = true;
+        }
+    } else if (key === '±') {
+        if (calculatorDisplayValue !== 'Error' && Number(calculatorDisplayValue) !== 0) {
+            calculatorDisplayValue = calculatorDisplayValue.startsWith('-')
+                ? calculatorDisplayValue.slice(1)
+                : `-${calculatorDisplayValue}`;
+        }
+    } else if (['+', '-', '*', '/'].includes(key)) {
+        if (calculatorDisplayValue === 'Error') return;
+        const inputValue = Number(calculatorDisplayValue);
+        if (calculatorStoredValue !== null && calculatorPendingOperator && !calculatorWaitingForOperand) {
+            calculatorDisplayValue = formatCalculatorResult(
+                calculateResult(calculatorStoredValue, inputValue, calculatorPendingOperator)
+            );
+            if (calculatorDisplayValue === 'Error') {
+                calculatorStoredValue = null;
+                calculatorPendingOperator = null;
+                calculatorWaitingForOperand = true;
+                updateCalculatorDisplay();
+                return;
+            }
+        }
+        calculatorStoredValue = Number(calculatorDisplayValue);
+        calculatorPendingOperator = key;
+        calculatorWaitingForOperand = true;
+    } else if (key === '=') {
+        if (calculatorPendingOperator && calculatorStoredValue !== null && calculatorDisplayValue !== 'Error') {
+            calculatorDisplayValue = formatCalculatorResult(
+                calculateResult(calculatorStoredValue, Number(calculatorDisplayValue), calculatorPendingOperator)
+            );
+        }
+        if (calculatorDisplayValue === 'Error') {
+            updateCalculatorDisplay();
+            return;
+        }
+        document.getElementById('txAmount').value = calculatorDisplayValue;
+        closeCalculator();
+        return;
+    } else if (/^\d$/.test(key) || key === '.') {
+        if (calculatorDisplayValue === 'Error' || calculatorWaitingForOperand) {
+            calculatorDisplayValue = key === '.' ? '0.' : key;
+            calculatorWaitingForOperand = false;
+        } else if (key !== '.' || !calculatorDisplayValue.includes('.')) {
+            calculatorDisplayValue = calculatorDisplayValue === '0' && key !== '.'
+                ? key
+                : calculatorDisplayValue + key;
+        }
+    }
+
+    updateCalculatorDisplay();
 }
 
 function setModalType(type) {
@@ -244,12 +409,37 @@ function handleTransactionSubmit(e) {
 }
 
 function saveUserData() {
-    const index = usersDB.findIndex(u => u.email === currentUser.email);
-    if (index !== -1) {
-        usersDB[index] = currentUser;
-        localStorage.setItem('fintech_users', JSON.stringify(usersDB));
-    }
+    const index = usersDB.findIndex(u => u.email.toLowerCase() === currentUser.email.toLowerCase());
+    if (index === -1) usersDB.push(currentUser);
+    else usersDB[index] = currentUser;
+    persistUsersDB();
+    localStorage.setItem('sesiUserAktif', currentUser.email);
     localStorage.setItem('fintech_current_user', JSON.stringify(currentUser));
+}
+
+function deleteTransaction(transactionIndex) {
+    const transactions = currentUser && currentUser.transactions;
+    if (!transactions || !Number.isInteger(transactionIndex) || transactionIndex < 0 || transactionIndex >= transactions.length) {
+        alert("Transaksi tidak ditemukan.");
+        return;
+    }
+
+    const transaction = transactions[transactionIndex];
+    const amount = Number(transaction.amount);
+    const currentBalance = Number(currentUser.balance);
+    if (!Number.isFinite(amount) || amount <= 0 || !['income', 'expense'].includes(transaction.type) || !Number.isFinite(currentBalance)) {
+        alert("Transaksi tidak dapat dihapus karena datanya tidak valid.");
+        return;
+    }
+
+    if (!confirm(`Hapus transaksi "${transaction.title}" sebesar $${amount.toFixed(2)}? Saldo akan disesuaikan.`)) {
+        return;
+    }
+
+    currentUser.balance = currentBalance + (transaction.type === 'income' ? -amount : amount);
+    transactions.splice(transactionIndex, 1);
+    saveUserData();
+    updateDashboardUI();
 }
 
 // UPDATE DASHBOARD & RENDER UI
@@ -329,7 +519,7 @@ function renderFullHistory() {
         return;
     }
 
-    txs.forEach(t => {
+    txs.forEach((t, index) => {
         const isInc = t.type === 'income';
         const sign = isInc ? '+' : '-';
         const colorClass = isInc ? 'text-emerald-600' : 'text-gray-900';
@@ -337,16 +527,21 @@ function renderFullHistory() {
         const div = document.createElement('div');
         div.className = "flex items-center justify-between p-3.5 bg-white border border-gray-100 rounded-xl shadow-xs";
         div.innerHTML = `
-            <div class="flex items-center space-x-3">
+            <div class="flex items-center space-x-3 min-w-0 flex-1">
                 <div class="w-10 h-10 rounded-xl bg-gray-50 text-gray-600 flex items-center justify-center text-sm font-semibold">
                     <i class="fa-solid ${isInc ? 'fa-arrow-down' : 'fa-arrow-up'}"></i>
                 </div>
-                <div>
+                <div class="min-w-0">
                     <h5 class="text-xs font-bold text-gray-900">${t.title}</h5>
                     <p class="text-[10px] text-gray-400">${t.category} • ${new Date(t.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
                 </div>
             </div>
-            <span class="text-xs font-bold ${colorClass}">${sign}$${t.amount.toFixed(2)}</span>
+            <div class="flex items-center space-x-2 shrink-0">
+                <span class="text-xs font-bold ${colorClass}">${sign}$${t.amount.toFixed(2)}</span>
+                <button type="button" onclick="deleteTransaction(${index})" aria-label="Hapus transaksi" title="Hapus transaksi" class="w-8 h-8 rounded-lg text-gray-400 hover:text-rose-600 hover:bg-rose-50 transition">
+                    <i class="fa-solid fa-trash-can text-xs"></i>
+                </button>
+            </div>
         `;
         container.appendChild(div);
     });
