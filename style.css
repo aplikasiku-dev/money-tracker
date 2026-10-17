@@ -42,6 +42,27 @@ body {
     animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+.btn-guest {
+    width: 100%;
+    margin-top: 8px;
+    padding: 14px 16px;
+    border: 0;
+    border-radius: 12px;
+    background: #6c757d;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    transition: background-color 0.2s, transform 0.2s;
+}
+
+.btn-guest:hover {
+    background: #5a6268;
+}
+
+.btn-guest:active {
+    transform: scale(0.98);
+}
+
 .wallet-card {
     transition: background 0.25s ease;
 }

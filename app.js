@@ -1,6 +1,22 @@
 // SIMULASI DATABASE & STATE MANAGEMENT
+const GUEST_SESSION_KEYS = ['isLoggedIn', 'userName', 'guestUserData'];
+const GUEST_NAME = 'Tamu Spesial';
+
+function clearGuestSessionOnPageLoad() {
+    const guestSessionActive = sessionStorage.getItem('isLoggedIn') === 'true' &&
+        (sessionStorage.getItem('guestUserData') !== null || sessionStorage.getItem('userName') === GUEST_NAME);
+    if (guestSessionActive) {
+        GUEST_SESSION_KEYS.forEach(key => sessionStorage.removeItem(key));
+        sessionStorage.setItem('guestSessionExpired', 'true');
+    }
+    return guestSessionActive || sessionStorage.getItem('guestSessionExpired') === 'true';
+}
+
+const guestSessionExpired = clearGuestSessionOnPageLoad();
+
 let usersDB = JSON.parse(localStorage.getItem('fintech_users') || '[]');
-let currentUser = loadActiveUser();
+let currentUser = guestSessionExpired ? null : loadActiveUser();
+let isGuestMode = false;
 let isAuthRegisterMode = false;
 let isBalanceSensorHidden = false;
 let calculatorDisplayValue = '0';
@@ -271,9 +287,29 @@ function setCardTheme(theme) {
 }
 
 function setActiveSession(user) {
+    isGuestMode = false;
+    sessionStorage.removeItem('guestSessionExpired');
     currentUser = user;
     localStorage.setItem('sesiUserAktif', user.email);
     localStorage.setItem('fintech_current_user', JSON.stringify(user));
+}
+
+function loginAsGuest() {
+    sessionStorage.removeItem('guestSessionExpired');
+    isGuestMode = true;
+    currentUser = {
+        name: GUEST_NAME,
+        email: 'guest@session.local',
+        password: '',
+        balance: 0,
+        transactions: [],
+        userId: 'GUEST',
+        age: ''
+    };
+    sessionStorage.setItem('isLoggedIn', 'true');
+    sessionStorage.setItem('userName', GUEST_NAME);
+    sessionStorage.setItem('guestUserData', JSON.stringify(currentUser));
+    showMainDashboard();
 }
 
 // Inisialisasi Aplikasi saat DOM Siap
@@ -292,6 +328,8 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function setupEventListeners() {
+    document.getElementById('btnGuest').addEventListener('click', loginAsGuest);
+
     document.getElementById('languageSelector').addEventListener('change', event => {
         const selectedLanguage = event.target.value;
         if (!['en', 'id'].includes(selectedLanguage)) {
@@ -514,6 +552,11 @@ function showMainDashboard() {
 
 function logoutUser() {
     currentUser = null;
+    if (isGuestMode) {
+        GUEST_SESSION_KEYS.forEach(key => sessionStorage.removeItem(key));
+        sessionStorage.setItem('guestSessionExpired', 'true');
+        isGuestMode = false;
+    }
     localStorage.removeItem('sesiUserAktif');
     localStorage.removeItem('fintech_current_user');
     showAuthScreen();
@@ -749,6 +792,12 @@ function handleTransactionSubmit(e) {
 }
 
 function saveUserData() {
+    if (isGuestMode) {
+        sessionStorage.setItem('guestUserData', JSON.stringify(currentUser));
+        sessionStorage.setItem('userName', currentUser.name);
+        return;
+    }
+
     const index = usersDB.findIndex(u => u.email.toLowerCase() === currentUser.email.toLowerCase());
     if (index === -1) usersDB.push(currentUser);
     else usersDB[index] = currentUser;
