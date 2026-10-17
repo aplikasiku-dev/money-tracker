@@ -84,32 +84,40 @@
             <div id="tabHome" class="flex-1 overflow-y-auto p-5 pb-28 space-y-6 fade-in">
                 <!-- Header -->
                 <div class="flex justify-between items-center">
-                    <div>
-                        <p class="text-xs text-gray-500 font-medium" id="currentDateHeader">Selasa, 13 Okt 2026</p>
-                        <h2 class="text-xl font-bold text-gray-900">Halo, <span id="userNameDisplay">User</span>! 👋</h2>
-                    </div>
-                    <div class="w-10 h-10 rounded-full bg-indigo-100 border border-indigo-200 text-indigo-600 font-bold flex items-center justify-center text-sm shadow-sm" id="userAvatar">U</div>
+                    <h2 class="text-lg font-bold text-gray-900"><span data-i18n="welcome">Halo,</span> <span id="userNameDisplay">User</span></h2>
+                    <label class="sr-only" for="currencySelector">Mata uang</label>
+                    <select id="currencySelector" aria-label="Pilih mata uang" class="px-2 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs font-semibold text-gray-700 focus:outline-none focus:border-indigo-600">
+                        <option value="USD">USD $</option>
+                        <option value="IDR">IDR Rp</option>
+                    </select>
                 </div>
 
                 <!-- Wallet Card -->
-                <div class="bg-gradient-to-r from-indigo-600 to-violet-600 rounded-2xl p-5 text-white shadow-xl shadow-indigo-200 relative overflow-hidden">
+                <div id="walletCard" class="wallet-card card-theme-blue rounded-2xl p-5 text-white shadow-xl shadow-indigo-200 relative overflow-hidden">
                     <div class="absolute -right-10 -bottom-10 w-36 h-36 bg-white/10 rounded-full blur-xl pointer-events-none"></div>
                     <div class="flex justify-between items-start">
                         <div>
-                            <p class="text-xs font-medium text-indigo-100 uppercase tracking-wider">Available Balance</p>
+                            <p class="text-xs font-medium text-indigo-100 uppercase tracking-wider" data-i18n="availableBalance">Available Balance</p>
                             <h3 id="displayBalance" class="text-2xl font-bold mt-1">$0.00</h3>
                         </div>
                         <button onclick="toggleBalanceSensor()" class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30 transition">
                             <i id="balanceSensorIcon" class="fa-solid fa-eye text-xs text-white"></i>
                         </button>
                     </div>
+                    <div class="flex justify-end items-center space-x-2 mt-4" aria-label="Pilih tema kartu">
+                        <span class="text-[10px] text-indigo-100 mr-1">Tema</span>
+                        <button type="button" data-card-theme="black" onclick="setCardTheme('black')" aria-label="Tema kartu hitam" title="Hitam" class="card-theme-swatch" style="background-color: #111827"></button>
+                        <button type="button" data-card-theme="blue" onclick="setCardTheme('blue')" aria-label="Tema kartu biru" title="Biru" class="card-theme-swatch" style="background-color: #2563eb"></button>
+                        <button type="button" data-card-theme="green" onclick="setCardTheme('green')" aria-label="Tema kartu hijau" title="Hijau" class="card-theme-swatch" style="background-color: #059669"></button>
+                        <button type="button" data-card-theme="gold" onclick="setCardTheme('gold')" aria-label="Tema kartu emas" title="Emas" class="card-theme-swatch" style="background-color: #d4a017"></button>
+                    </div>
                     <div class="flex justify-between items-end mt-6">
                         <div>
-                            <p class="text-[10px] text-indigo-200 uppercase tracking-wider">Card Number</p>
+                            <p class="text-[10px] text-indigo-200 uppercase tracking-wider" data-i18n="cardNumber">Card Number</p>
                             <p class="text-xs font-mono font-medium tracking-widest mt-0.5">•••• •••• •••• 4892</p>
                         </div>
                         <div class="text-right">
-                            <p class="text-[10px] text-indigo-200 uppercase tracking-wider">Valid Thru</p>
+                            <p class="text-[10px] text-indigo-200 uppercase tracking-wider" data-i18n="validThru">Valid Thru</p>
                             <p class="text-xs font-mono font-medium">08/28</p>
                         </div>
                     </div>
@@ -119,19 +127,19 @@
                 <div class="grid grid-cols-2 gap-3">
                     <button onclick="openTransactionModal('expense')" class="flex items-center justify-center space-x-2 py-3 px-4 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl font-semibold text-xs text-gray-700 transition shadow-sm">
                         <i class="fa-solid fa-circle-plus text-indigo-600"></i>
-                        <span>+ Add Expense</span>
+                        <span data-i18n="addExpense">+ Add Expense</span>
                     </button>
                     <button onclick="openTransactionModal('income')" class="flex items-center justify-center space-x-2 py-3 px-4 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl font-semibold text-xs text-gray-700 transition shadow-sm">
                         <i class="fa-solid fa-circle-plus text-emerald-600"></i>
-                        <span>+ Add Income</span>
+                        <span data-i18n="addIncome">+ Add Income</span>
                     </button>
                 </div>
 
                 <!-- Spending Breakdown -->
                 <div class="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm space-y-3">
                     <div class="flex justify-between items-center">
-                        <h4 class="text-sm font-bold text-gray-900">Spending Breakdown</h4>
-                        <span class="text-[10px] text-gray-400 bg-gray-50 px-2 py-1 rounded-md font-medium">This Month</span>
+                        <h4 class="text-sm font-bold text-gray-900" data-i18n="spendingBreakdown">Spending Breakdown</h4>
+                        <span class="text-[10px] text-gray-400 bg-gray-50 px-2 py-1 rounded-md font-medium" data-i18n="thisMonth">This Month</span>
                     </div>
                     <div class="flex items-center space-x-4">
                         <div class="relative w-24 h-24 flex items-center justify-center">
@@ -141,20 +149,20 @@
                             </svg>
                             <div class="absolute text-center">
                                 <span id="homeTotalSpent" class="text-xs font-bold text-gray-800">$0</span>
-                                <p class="text-[9px] text-gray-400">Total Spent</p>
+                                <p class="text-[9px] text-gray-400" data-i18n="totalSpent">Total Spent</p>
                             </div>
                         </div>
                         <div class="flex-1 space-y-1.5 text-xs">
                             <div class="flex items-center justify-between">
-                                <span class="flex items-center space-x-1.5 text-gray-600"><span class="w-2 h-2 rounded-full bg-indigo-600"></span><span>Food & Drinks</span></span>
+                                <span class="flex items-center space-x-1.5 text-gray-600"><span class="w-2 h-2 rounded-full bg-indigo-600"></span><span data-i18n="foodDrinks">Food &amp; Drinks</span></span>
                                 <span id="breakdownFood" class="font-semibold text-gray-900">0%</span>
                             </div>
                             <div class="flex items-center justify-between">
-                                <span class="flex items-center space-x-1.5 text-gray-600"><span class="w-2 h-2 rounded-full bg-blue-500"></span><span>Transport</span></span>
+                                <span class="flex items-center space-x-1.5 text-gray-600"><span class="w-2 h-2 rounded-full bg-blue-500"></span><span data-i18n="transport">Transport</span></span>
                                 <span id="breakdownTransport" class="font-semibold text-gray-900">0%</span>
                             </div>
                             <div class="flex items-center justify-between">
-                                <span class="flex items-center space-x-1.5 text-gray-600"><span class="w-2 h-2 rounded-full bg-amber-400"></span><span>Shopping</span></span>
+                                <span class="flex items-center space-x-1.5 text-gray-600"><span class="w-2 h-2 rounded-full bg-amber-400"></span><span data-i18n="shopping">Shopping</span></span>
                                 <span id="breakdownShopping" class="font-semibold text-gray-900">0%</span>
                             </div>
                         </div>
@@ -164,8 +172,8 @@
                 <!-- Recent Expenses -->
                 <div>
                     <div class="flex justify-between items-center mb-3">
-                        <h4 class="text-sm font-bold text-gray-900">Recent Transactions</h4>
-                        <button onclick="switchTab('history')" class="text-xs font-semibold text-indigo-600 hover:underline">See All</button>
+                        <h4 class="text-sm font-bold text-gray-900" data-i18n="recentTransactions">Recent Transactions</h4>
+                        <button onclick="switchTab('history')" class="text-xs font-semibold text-indigo-600 hover:underline" data-i18n="seeAll">See All</button>
                     </div>
                     <div id="recentExpensesList" class="space-y-2.5">
                         <!-- Populated via JavaScript -->
@@ -176,7 +184,7 @@
             <!-- TAB 2: HISTORY -->
             <div id="tabHistory" class="flex-1 overflow-y-auto p-5 pb-28 space-y-4 hidden fade-in">
                 <div class="flex justify-between items-center">
-                    <h2 class="text-lg font-bold text-gray-900">Expenses List</h2>
+                    <h2 class="text-lg font-bold text-gray-900" data-i18n="expensesList">Expenses List</h2>
                     <div class="flex space-x-2">
                         <button class="w-9 h-9 rounded-xl bg-gray-50 border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-100 transition"><i class="fa-solid fa-search text-xs"></i></button>
                         <button class="w-9 h-9 rounded-xl bg-gray-50 border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-100 transition"><i class="fa-solid fa-filter text-xs"></i></button>
@@ -185,10 +193,10 @@
 
                 <!-- Filter Pills -->
                 <div class="flex space-x-2 overflow-x-auto hide-scrollbar pb-1">
-                    <button class="px-4 py-1.5 bg-indigo-600 text-white rounded-full text-xs font-semibold whitespace-nowrap shadow-sm">This Month</button>
-                    <button class="px-4 py-1.5 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded-full text-xs font-medium whitespace-nowrap transition">All Categories</button>
-                    <button class="px-4 py-1.5 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded-full text-xs font-medium whitespace-nowrap transition">Income</button>
-                    <button class="px-4 py-1.5 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded-full text-xs font-medium whitespace-nowrap transition">Expense</button>
+                    <button class="px-4 py-1.5 bg-indigo-600 text-white rounded-full text-xs font-semibold whitespace-nowrap shadow-sm" data-i18n="thisMonth">This Month</button>
+                    <button class="px-4 py-1.5 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded-full text-xs font-medium whitespace-nowrap transition" data-i18n="allCategories">All Categories</button>
+                    <button class="px-4 py-1.5 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded-full text-xs font-medium whitespace-nowrap transition" data-i18n="income">Income</button>
+                    <button class="px-4 py-1.5 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded-full text-xs font-medium whitespace-nowrap transition" data-i18n="expense">Expense</button>
                 </div>
 
                 <!-- Transaction List Grouped -->
@@ -200,7 +208,7 @@
             <!-- TAB 3: REPORT -->
             <div id="tabReport" class="flex-1 overflow-y-auto p-5 pb-28 space-y-5 hidden fade-in">
                 <div class="flex justify-between items-center">
-                    <h2 class="text-lg font-bold text-gray-900">Financial Report</h2>
+                    <h2 class="text-lg font-bold text-gray-900" data-i18n="financialReport">Financial Report</h2>
                     <span id="reportMonthYear" class="text-xs font-semibold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-lg">October 2026</span>
                 </div>
 
@@ -225,21 +233,21 @@
                 <div class="grid grid-cols-2 gap-3">
                     <div class="bg-gradient-to-br from-indigo-600 to-indigo-700 rounded-2xl p-4 text-white shadow-md shadow-indigo-100">
                         <div class="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center mb-2"><i class="fa-solid fa-wallet text-xs"></i></div>
-                        <p class="text-[10px] text-indigo-100 uppercase tracking-wider font-medium">Total Salary</p>
+                        <p class="text-[10px] text-indigo-100 uppercase tracking-wider font-medium" data-i18n="totalSalary">Total Salary</p>
                         <h4 id="reportTotalSalary" class="text-base font-bold mt-0.5">$0.00</h4>
-                        <p class="text-[9px] text-indigo-200 mt-1">Live updates</p>
+                        <p class="text-[9px] text-indigo-200 mt-1" data-i18n="liveUpdates">Live updates</p>
                     </div>
                     <div class="bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl p-4 text-white shadow-md shadow-orange-100">
                         <div class="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center mb-2"><i class="fa-solid fa-receipt text-xs"></i></div>
-                        <p class="text-[10px] text-amber-100 uppercase tracking-wider font-medium">Total Expense</p>
+                        <p class="text-[10px] text-amber-100 uppercase tracking-wider font-medium" data-i18n="totalExpense">Total Expense</p>
                         <h4 id="reportTotalExpense" class="text-base font-bold mt-0.5">$0.00</h4>
-                        <p class="text-[9px] text-amber-100 mt-1">Live updates</p>
+                        <p class="text-[9px] text-amber-100 mt-1" data-i18n="liveUpdates">Live updates</p>
                     </div>
                 </div>
 
                 <!-- Large Donut Chart Section -->
                 <div class="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm space-y-4">
-                    <h4 class="text-sm font-bold text-gray-900">Expense Breakdown</h4>
+                    <h4 class="text-sm font-bold text-gray-900" data-i18n="expenseBreakdown">Expense Breakdown</h4>
                     <div class="flex flex-col items-center justify-center py-2">
                         <div class="relative w-36 h-36 flex items-center justify-center">
                             <svg class="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
@@ -248,7 +256,7 @@
                             </svg>
                             <div class="absolute text-center">
                                 <span id="reportChartCenterText" class="text-sm font-bold text-gray-800">100%</span>
-                                <p class="text-[10px] text-gray-400">Allocated</p>
+                                <p class="text-[10px] text-gray-400" data-i18n="allocated">Allocated</p>
                             </div>
                         </div>
                     </div>
@@ -258,16 +266,87 @@
                 </div>
             </div>
 
+            <!-- TAB 4: ACCOUNT -->
+            <div id="tabAccount" class="flex-1 overflow-y-auto p-5 pb-28 space-y-5 hidden fade-in">
+                <div class="flex justify-end">
+                    <label class="sr-only" for="languageSelector">Language</label>
+                    <select id="languageSelector" aria-label="Pilih bahasa" class="px-3 py-2 bg-white border border-gray-200 rounded-xl text-sm font-semibold text-gray-700 shadow-sm focus:outline-none focus:border-indigo-600">
+                        <option value="id">🇮🇩 ID</option>
+                        <option value="en">🇬🇧 EN</option>
+                    </select>
+                </div>
+                <div class="space-y-2">
+                    <h2 class="text-2xl font-bold text-gray-900" data-i18n="account">Account</h2>
+                    <div class="flex items-center justify-between gap-3">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <div class="w-11 h-11 shrink-0 rounded-full bg-indigo-100 border border-indigo-200 text-indigo-600 font-bold flex items-center justify-center shadow-sm" id="accountAvatar">U</div>
+                            <p id="accountUserName" class="text-base font-bold text-gray-900 truncate">User</p>
+                        </div>
+                        <button type="button" onclick="logoutUser()" class="account-logout-button">
+                            <i class="fa-solid fa-right-from-bracket"></i>
+                            <span data-i18n="logout">Logout</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="account-menu-list">
+                    <button type="button" onclick="toggleAccountPanel('profilePanel')" aria-expanded="false" aria-controls="profilePanel" class="account-menu-item">
+                        <span class="account-menu-icon"><i class="fa-solid fa-user"></i></span>
+                        <span class="flex-1 text-left">
+                            <span class="block text-sm font-semibold text-gray-800" data-i18n="profile">Profile</span>
+                            <span class="block text-xs text-gray-500 mt-0.5" data-i18n="profileSubtitle">View and edit your personal details</span>
+                        </span>
+                        <i class="fa-solid fa-chevron-right text-xs text-gray-400"></i>
+                    </button>
+                    <button type="button" onclick="toggleAccountPanel('passwordPanel')" aria-expanded="false" aria-controls="passwordPanel" class="account-menu-item">
+                        <span class="account-menu-icon"><i class="fa-solid fa-lock"></i></span>
+                        <span class="flex-1 text-left">
+                            <span class="block text-sm font-semibold text-gray-800" data-i18n="changePassword">Change Password</span>
+                            <span class="block text-xs text-gray-500 mt-0.5" data-i18n="passwordSubtitle">Update your account password</span>
+                        </span>
+                        <i class="fa-solid fa-chevron-right text-xs text-gray-400"></i>
+                    </button>
+                </div>
+                <section id="profilePanel" class="account-inline-panel hidden" aria-labelledby="profilePanelTitle">
+                    <h3 id="profilePanelTitle" class="text-base font-bold text-gray-900 mb-3" data-i18n="profile">Profile</h3>
+                    <p class="profile-detail-row mb-3"><span data-i18n="userId">Student ID / User ID</span><strong id="profileIdValue"></strong></p>
+                    <form id="editProfileForm" class="space-y-3">
+                        <label class="account-form-label"><span data-i18n="fullName">Full Name</span>
+                            <input id="editProfileName" type="text" required maxlength="80" class="account-form-input">
+                        </label>
+                        <label class="account-form-label"><span data-i18n="age">Age</span>
+                            <input id="editProfileAge" type="number" required min="1" max="130" step="1" inputmode="numeric" class="account-form-input">
+                        </label>
+                        <button type="submit" class="account-submit-button" data-i18n="saveChanges">Save Changes</button>
+                    </form>
+                </section>
+                <section id="passwordPanel" class="account-inline-panel hidden" aria-labelledby="passwordPanelTitle">
+                    <h3 id="passwordPanelTitle" class="text-base font-bold text-gray-900 mb-3" data-i18n="changePassword">Change Password</h3>
+                    <form id="passwordForm" class="space-y-3">
+                        <label class="account-form-label"><span data-i18n="currentPassword">Current Password</span>
+                            <input id="currentPassword" type="password" required autocomplete="current-password" class="account-form-input">
+                        </label>
+                        <label class="account-form-label"><span data-i18n="newPassword">New Password</span>
+                            <input id="newPassword" type="password" required minlength="6" autocomplete="new-password" class="account-form-input">
+                        </label>
+                        <label class="account-form-label"><span data-i18n="confirmPassword">Confirm New Password</span>
+                            <input id="confirmNewPassword" type="password" required minlength="6" autocomplete="new-password" class="account-form-input">
+                        </label>
+                        <p id="passwordFormMessage" class="hidden text-xs font-medium" role="status"></p>
+                        <button type="submit" class="account-submit-button" data-i18n="updatePassword">Update Password</button>
+                    </form>
+                </section>
+            </div>
+
             <!-- Floating Bottom Navigation Bar -->
             <div class="absolute bottom-4 left-4 right-4 z-40">
                 <div class="bg-[#1F2937]/95 backdrop-blur-md rounded-2xl px-4 py-2.5 flex justify-between items-center shadow-2xl border border-white/10">
                     <button onclick="switchTab('home')" id="navHome" class="flex flex-col items-center space-y-1 text-indigo-400 transition">
                         <i class="fa-solid fa-house text-sm"></i>
-                        <span class="text-[9px] font-medium">Home</span>
+                        <span class="text-[9px] font-medium" data-i18n="home">Home</span>
                     </button>
                     <button onclick="switchTab('history')" id="navHistory" class="flex flex-col items-center space-y-1 text-gray-400 hover:text-white transition">
                         <i class="fa-solid fa-clock-rotate-left text-sm"></i>
-                        <span class="text-[9px] font-medium">History</span>
+                        <span class="text-[9px] font-medium" data-i18n="history">History</span>
                     </button>
                     <!-- Floating Center Action Button -->
                     <button onclick="openTransactionModal('expense')" class="w-12 h-12 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full flex items-center justify-center shadow-lg shadow-indigo-600/50 transform -translate-y-3 transition hover:scale-105 active:scale-95">
@@ -275,11 +354,11 @@
                     </button>
                     <button onclick="switchTab('report')" id="navReport" class="flex flex-col items-center space-y-1 text-gray-400 hover:text-white transition">
                         <i class="fa-solid fa-chart-pie text-sm"></i>
-                        <span class="text-[9px] font-medium">Report</span>
+                        <span class="text-[9px] font-medium" data-i18n="report">Report</span>
                     </button>
-                    <button onclick="logoutUser()" class="flex flex-col items-center space-y-1 text-gray-400 hover:text-rose-400 transition">
-                        <i class="fa-solid fa-right-from-bracket text-sm"></i>
-                        <span class="text-[9px] font-medium">Logout</span>
+                    <button onclick="switchTab('account')" id="navAccount" class="flex flex-col items-center space-y-1 text-gray-400 hover:text-white transition">
+                        <i class="fa-solid fa-user-gear text-sm"></i>
+                        <span class="text-[9px] font-medium" data-i18n="account">Account</span>
                     </button>
                 </div>
             </div>
@@ -289,48 +368,48 @@
         <div id="transactionModal" class="absolute inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end justify-center hidden transition-opacity">
             <div class="bg-white w-full rounded-t-[32px] p-6 space-y-5 animate-slide-up max-h-[85vh] overflow-y-auto">
                 <div class="flex justify-between items-center border-b border-gray-100 pb-3">
-                    <h3 id="modalTitle" class="text-base font-bold text-gray-900">Tambah Transaksi Baru</h3>
+                    <h3 id="modalTitle" class="text-base font-bold text-gray-900" data-i18n="transactionTitle">Add New Transaction</h3>
                     <button onclick="closeTransactionModal()" class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-200"><i class="fa-solid fa-xmark text-sm"></i></button>
                 </div>
 
                 <!-- Type Selector Tabs -->
                 <div class="grid grid-cols-2 gap-2 bg-gray-100 p-1 rounded-xl">
-                    <button type="button" id="typeExpenseBtn" onclick="setModalType('expense')" class="py-2 text-xs font-semibold rounded-lg bg-white shadow-sm text-gray-900 transition">Pengeluaran</button>
-                    <button type="button" id="typeIncomeBtn" onclick="setModalType('income')" class="py-2 text-xs font-semibold rounded-lg text-gray-500 transition">Pemasukan</button>
+                    <button type="button" id="typeExpenseBtn" onclick="setModalType('expense')" data-i18n="expense" class="py-2 text-xs font-semibold rounded-lg bg-white shadow-sm text-gray-900 transition">Expense</button>
+                    <button type="button" id="typeIncomeBtn" onclick="setModalType('income')" data-i18n="income" class="py-2 text-xs font-semibold rounded-lg text-gray-500 transition">Income</button>
                 </div>
 
                 <form id="transactionForm" onsubmit="handleTransactionSubmit(event)" class="space-y-4">
                     <input type="hidden" id="txType" value="expense">
                     <div>
-                        <label class="block text-xs font-semibold uppercase tracking-wider text-gray-600 mb-1">Jumlah Nominal ($)</label>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-gray-600 mb-1"><span data-i18n="amount">Amount</span> (<span id="txCurrencyLabel">$</span>)</label>
                         <div class="flex items-center gap-2">
-                            <input type="number" step="0.01" id="txAmount" required class="min-w-0 flex-1 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-indigo-600 font-semibold" placeholder="0.00">
-                            <button type="button" onclick="openCalculator()" aria-label="Buka kalkulator nominal" title="Buka kalkulator" class="w-12 h-12 shrink-0 bg-gray-900 hover:bg-gray-800 text-white rounded-xl text-xl transition active:scale-95">🧮</button>
+                            <input type="text" inputmode="decimal" id="txAmount" required class="min-w-0 flex-1 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-indigo-600 font-semibold" placeholder="0.00">
+                            <button type="button" onclick="openCalculator()" aria-label="Open amount calculator" title="Open calculator" data-i18n-aria-label="calculator" class="w-12 h-12 shrink-0 bg-gray-900 hover:bg-gray-800 text-white rounded-xl text-xl transition active:scale-95">🧮</button>
                         </div>
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold uppercase tracking-wider text-gray-600 mb-1">Nama / Judul Transaksi</label>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-gray-600 mb-1" data-i18n="transactionName">Transaction Name</label>
                         <input type="text" id="txTitle" required class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-indigo-600" placeholder="Contoh: Belanja Bulanan / Gaji">
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold uppercase tracking-wider text-gray-600 mb-1">Kategori</label>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-gray-600 mb-1" data-i18n="category">Category</label>
                         <select id="txCategory" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-indigo-600">
-                            <option value="Food & Drinks">Food & Drinks</option>
-                            <option value="Transport">Transport</option>
-                            <option value="Shopping">Shopping</option>
-                            <option value="Salary">Salary</option>
-                            <option value="Other">Other</option>
+                            <option value="Food & Drinks" data-i18n="foodDrinks">Food &amp; Drinks</option>
+                            <option value="Transport" data-i18n="transport">Transport</option>
+                            <option value="Shopping" data-i18n="shopping">Shopping</option>
+                            <option value="Salary" data-i18n="income">Income</option>
+                            <option value="Other" data-i18n="other">Other</option>
                         </select>
                     </div>
-                    <button type="submit" class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl shadow-lg shadow-indigo-200 transition">Simpan Transaksi</button>
+                    <button type="submit" class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl shadow-lg shadow-indigo-200 transition" data-i18n="saveTransaction">Save Transaction</button>
                 </form>
             </div>
 
             <div id="calculatorModal" class="calculator-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="calculatorTitle">
                 <div class="calculator-panel" onclick="event.stopPropagation()">
                     <div class="flex items-center justify-between mb-4">
-                        <h3 id="calculatorTitle" class="text-sm font-semibold text-gray-300">Kalkulator Nominal</h3>
-                        <button type="button" onclick="closeCalculator()" aria-label="Tutup kalkulator" class="calculator-close">×</button>
+                        <h3 id="calculatorTitle" class="text-sm font-semibold text-gray-300" data-i18n="calculator">Amount Calculator</h3>
+                        <button type="button" onclick="closeCalculator()" aria-label="Close" data-i18n-aria-label="close" class="calculator-close">×</button>
                     </div>
                     <div class="calculator-screen" aria-live="polite">
                         <div id="calculatorExpression" class="calculator-expression"></div>

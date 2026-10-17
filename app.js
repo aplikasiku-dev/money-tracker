@@ -7,6 +7,67 @@ let calculatorDisplayValue = '0';
 let calculatorStoredValue = null;
 let calculatorPendingOperator = null;
 let calculatorWaitingForOperand = false;
+const savedCurrency = localStorage.getItem('fintech_currency');
+let currentCurrency = savedCurrency === 'IDR' ? 'IDR' : 'USD';
+const savedCardTheme = localStorage.getItem('fintech_card_theme');
+let currentCardTheme = ['black', 'blue', 'green', 'gold'].includes(savedCardTheme) ? savedCardTheme : 'blue';
+const savedLanguage = localStorage.getItem('fintech_language');
+let currentLanguage = savedLanguage === 'en' ? 'en' : 'id';
+
+const translations = {
+    en: {
+        welcome: 'Hello,', logout: 'Logout', availableBalance: 'Available Balance', cardNumber: 'Card Number', validThru: 'Valid Thru',
+        addExpense: '+ Add Expense', addIncome: '+ Add Income', spendingBreakdown: 'Spending Breakdown', totalSpent: 'Total Spent',
+        recentTransactions: 'Recent Transactions', seeAll: 'See All', expensesList: 'Expenses List', thisMonth: 'This Month',
+        allCategories: 'All Categories', financialReport: 'Financial Report',
+        totalSalary: 'Total Salary', totalExpense: 'Total Expense', expenseBreakdown: 'Expense Breakdown',
+        account: 'Account', accountSubtitle: 'Manage your profile and security settings.', profile: 'Profile',
+        profileSubtitle: 'View and edit your personal details', changePassword: 'Change Password',
+        passwordSubtitle: 'Update your account password', fullName: 'Full Name', userId: 'Student ID / User ID',
+        faculty: 'Faculty / Category', birthPlace: 'Place of Birth', birthDateAge: 'Date of Birth / Age',
+        dateOfBirth: 'Date of Birth', age: 'Age', editProfile: 'Edit Profile', saveChanges: 'Save Changes', close: 'Close',
+        currentPassword: 'Current Password', newPassword: 'New Password', confirmPassword: 'Confirm New Password',
+        updatePassword: 'Update Password', home: 'Home', history: 'History', report: 'Report',
+        transactionTitle: 'Add New Transaction', expenseTitle: 'Add New Expense', incomeTitle: 'Add New Income',
+        expense: 'Expense', income: 'Income', amount: 'Amount', transactionName: 'Transaction Name',
+        category: 'Category', saveTransaction: 'Save Transaction', calculator: 'Amount Calculator',
+        liveUpdates: 'Live updates',
+        allocated: 'Allocated', foodDrinks: 'Food & Drinks', transport: 'Transport', shopping: 'Shopping', other: 'Other',
+        ageYears: 'years old',
+        noValue: 'Not provided', invalidBirthDate: 'Date of birth cannot be in the future.',
+        invalidAge: 'Enter an age between 1 and 130.',
+        incorrectPassword: 'Current password is incorrect.', passwordMismatch: 'New passwords do not match.',
+        passwordUpdated: 'Password updated successfully.', passwordUpdateFailed: 'Could not save the password. Please try again.',
+        passwordTooShort: 'New password must be at least 6 characters.', changesSaveFailed: 'Could not save changes. Please try again.'
+    },
+    id: {
+        welcome: 'Halo,', logout: 'Keluar', availableBalance: 'Saldo Tersedia', cardNumber: 'Nomor Kartu', validThru: 'Berlaku Hingga',
+        addExpense: '+ Tambah Pengeluaran', addIncome: '+ Tambah Pemasukan', spendingBreakdown: 'Rincian Pengeluaran',
+        totalSpent: 'Total Pengeluaran', recentTransactions: 'Transaksi Terbaru', seeAll: 'Lihat Semua',
+        expensesList: 'Daftar Transaksi', thisMonth: 'Bulan Ini', allCategories: 'Semua Kategori',
+        financialReport: 'Laporan Keuangan', totalSalary: 'Total Pemasukan',
+        totalExpense: 'Total Pengeluaran', expenseBreakdown: 'Rincian Pengeluaran',
+        account: 'Akun', accountSubtitle: 'Kelola profil dan pengaturan keamanan Anda.', profile: 'Profil',
+        profileSubtitle: 'Lihat dan ubah detail pribadi Anda', changePassword: 'Ganti Kata Sandi',
+        passwordSubtitle: 'Perbarui kata sandi akun Anda', fullName: 'Nama Lengkap', userId: 'ID Mahasiswa / ID Pengguna',
+        faculty: 'Fakultas / Kategori', birthPlace: 'Tempat Lahir', birthDateAge: 'Tanggal Lahir / Umur',
+        dateOfBirth: 'Tanggal Lahir', age: 'Umur / Usia', editProfile: 'Edit Profil', saveChanges: 'Simpan Perubahan', close: 'Tutup',
+        currentPassword: 'Kata Sandi Lama', newPassword: 'Kata Sandi Baru', confirmPassword: 'Konfirmasi Kata Sandi Baru',
+        updatePassword: 'Perbarui Kata Sandi', home: 'Beranda', history: 'Riwayat', report: 'Laporan',
+        transactionTitle: 'Tambah Transaksi Baru', expenseTitle: 'Tambah Pengeluaran Baru', incomeTitle: 'Tambah Pemasukan Baru',
+        expense: 'Pengeluaran', income: 'Pemasukan', amount: 'Jumlah Nominal', transactionName: 'Nama / Judul Transaksi',
+        category: 'Kategori', saveTransaction: 'Simpan Transaksi', calculator: 'Kalkulator Nominal',
+        liveUpdates: 'Diperbarui langsung',
+        allocated: 'Dialokasikan', foodDrinks: 'Makanan & Minuman', transport: 'Transportasi', shopping: 'Belanja', other: 'Lainnya',
+        ageYears: 'tahun',
+        noValue: 'Belum diisi', invalidBirthDate: 'Tanggal lahir tidak boleh di masa depan.',
+        invalidAge: 'Masukkan umur antara 1 sampai 130 tahun.',
+        incorrectPassword: 'Kata sandi lama salah.', passwordMismatch: 'Kata sandi baru tidak cocok.',
+        passwordUpdated: 'Kata sandi berhasil diperbarui.', passwordUpdateFailed: 'Kata sandi gagal disimpan. Silakan coba lagi.',
+        passwordTooShort: 'Kata sandi baru harus terdiri dari minimal 6 karakter.',
+        changesSaveFailed: 'Perubahan gagal disimpan. Silakan coba lagi.'
+    }
+};
 
 function loadActiveUser() {
     const savedSessionEmail = localStorage.getItem('sesiUserAktif');
@@ -41,6 +102,174 @@ function persistUsersDB() {
     localStorage.setItem('fintech_users', JSON.stringify(usersDB));
 }
 
+function translate(key) {
+    return translations[currentLanguage][key] || translations.en[key] || key;
+}
+
+function applyLanguage() {
+    document.documentElement.lang = currentLanguage;
+    document.getElementById('languageSelector').value = currentLanguage;
+    document.querySelectorAll('[data-i18n]').forEach(element => {
+        element.textContent = translate(element.dataset.i18n);
+    });
+    document.querySelectorAll('[data-i18n-aria-label]').forEach(element => {
+        const label = translate(element.dataset.i18nAriaLabel);
+        element.setAttribute('aria-label', label);
+        element.title = label;
+    });
+    if (currentUser) {
+        updateDashboardUI();
+        if (!document.getElementById('tabReport').classList.contains('hidden')) updateReportUI();
+    }
+}
+
+function translateCategory(category) {
+    const categoryKeys = {
+        'Food & Drinks': 'foodDrinks',
+        Transport: 'transport',
+        Shopping: 'shopping',
+        Other: 'other',
+        Salary: 'income'
+    };
+    return categoryKeys[category] ? translate(categoryKeys[category]) : category;
+}
+
+function createUserId() {
+    return `USR-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+}
+
+function calculateAge(birthDate) {
+    const birth = new Date(`${birthDate}T00:00:00`);
+    if (Number.isNaN(birth.getTime())) return null;
+    const today = new Date();
+    let age = today.getFullYear() - birth.getFullYear();
+    if (today.getMonth() < birth.getMonth() ||
+        (today.getMonth() === birth.getMonth() && today.getDate() < birth.getDate())) {
+        age--;
+    }
+    return age;
+}
+
+function ensureUserProfile() {
+    let needsSave = false;
+    if (!currentUser.userId) {
+        currentUser.userId = createUserId();
+        needsSave = true;
+    }
+    if (!Object.prototype.hasOwnProperty.call(currentUser, 'age')) {
+        const ageFromBirthDate = currentUser.birthDate ? calculateAge(currentUser.birthDate) : null;
+        currentUser.age = ageFromBirthDate !== null && ageFromBirthDate >= 1 && ageFromBirthDate <= 130
+            ? ageFromBirthDate
+            : '';
+        needsSave = true;
+    } else if (currentUser.age !== '' &&
+        (!Number.isInteger(currentUser.age) || currentUser.age < 1 || currentUser.age > 130)) {
+        currentUser.age = '';
+        needsSave = true;
+    }
+    if (needsSave) saveUserData();
+}
+
+function toggleAccountPanel(panelId) {
+    const panel = document.getElementById(panelId);
+    const willOpen = panel.classList.contains('hidden');
+    document.querySelectorAll('.account-inline-panel').forEach(item => item.classList.add('hidden'));
+    document.querySelectorAll('.account-menu-item[aria-controls]').forEach(button => {
+        button.setAttribute('aria-expanded', String(button.getAttribute('aria-controls') === panelId && willOpen));
+    });
+    if (willOpen) {
+        panel.classList.remove('hidden');
+        if (panelId === 'profilePanel') {
+            document.getElementById('profileIdValue').textContent = currentUser.userId;
+            document.getElementById('editProfileName').value = currentUser.name || '';
+            document.getElementById('editProfileAge').value = currentUser.age || '';
+        } else {
+            document.getElementById('passwordForm').reset();
+            document.getElementById('passwordFormMessage').classList.add('hidden');
+        }
+    }
+}
+
+function formatMoney(amount) {
+    const value = Number(amount);
+    if (currentCurrency === 'IDR') {
+        return `Rp ${value.toLocaleString('id-ID', { maximumFractionDigits: 0 })}`;
+    }
+    return `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function parseTransactionAmount(value) {
+    const normalizedValue = currentCurrency === 'IDR'
+        ? value.replace(/\./g, '')
+        : value.replace(/,/g, '');
+    return normalizedValue.trim() ? Number(normalizedValue) : NaN;
+}
+
+function formatTransactionAmountValue(value) {
+    if (currentCurrency === 'IDR') {
+        return value.replace(/\D/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    }
+
+    const sanitizedValue = value.replace(/,/g, '').replace(/[^\d.]/g, '');
+    const decimalIndex = sanitizedValue.indexOf('.');
+    const integerDigits = (decimalIndex === -1 ? sanitizedValue : sanitizedValue.slice(0, decimalIndex));
+    const fractionDigits = decimalIndex === -1 ? '' : sanitizedValue.slice(decimalIndex + 1).replace(/\./g, '').slice(0, 2);
+    const groupedInteger = integerDigits.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    const integerPart = groupedInteger || (decimalIndex !== -1 ? '0' : '');
+    return decimalIndex === -1 ? integerPart : `${integerPart}.${fractionDigits}`;
+}
+
+function formatTransactionAmountInput() {
+    const input = document.getElementById('txAmount');
+    const originalValue = input.value;
+    const originalCaret = input.selectionStart === null ? originalValue.length : input.selectionStart;
+    const semanticCharacters = currentCurrency === 'IDR' ? /\d/g : /[\d.]/g;
+    const charactersBeforeCaret = (originalValue.slice(0, originalCaret).match(semanticCharacters) || []).length;
+    const formattedValue = formatTransactionAmountValue(originalValue);
+    input.value = formattedValue;
+
+    let nextCaret = 0;
+    let charactersSeen = 0;
+    for (let index = 0; index < formattedValue.length; index++) {
+        const isSemanticCharacter = currentCurrency === 'IDR'
+            ? /\d/.test(formattedValue[index])
+            : /[\d.]/.test(formattedValue[index]);
+        if (isSemanticCharacter) {
+            charactersSeen++;
+        }
+        nextCaret = index + 1;
+        if (charactersSeen >= charactersBeforeCaret) break;
+    }
+    if (charactersBeforeCaret === 0) nextCaret = 0;
+    input.setSelectionRange(nextCaret, nextCaret);
+}
+
+function updateCurrencyLabel() {
+    document.getElementById('txCurrencyLabel').textContent = currentCurrency === 'IDR' ? 'Rp' : '$';
+    const amountInput = document.getElementById('txAmount');
+    amountInput.inputMode = currentCurrency === 'IDR' ? 'numeric' : 'decimal';
+    amountInput.placeholder = currentCurrency === 'IDR' ? '0' : '0.00';
+}
+
+function applyCardTheme() {
+    const card = document.getElementById('walletCard');
+    card.classList.remove('card-theme-black', 'card-theme-blue', 'card-theme-green', 'card-theme-gold');
+    card.classList.add(`card-theme-${currentCardTheme}`);
+    document.querySelectorAll('[data-card-theme]').forEach(button => {
+        button.setAttribute('aria-pressed', String(button.dataset.cardTheme === currentCardTheme));
+    });
+}
+
+function setCardTheme(theme) {
+    if (!['black', 'blue', 'green', 'gold'].includes(theme)) {
+        alert("Tema kartu tidak valid.");
+        return;
+    }
+    currentCardTheme = theme;
+    localStorage.setItem('fintech_card_theme', currentCardTheme);
+    applyCardTheme();
+}
+
 function setActiveSession(user) {
     currentUser = user;
     localStorage.setItem('sesiUserAktif', user.email);
@@ -49,6 +278,11 @@ function setActiveSession(user) {
 
 // Inisialisasi Aplikasi saat DOM Siap
 document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('currencySelector').value = currentCurrency;
+    updateCurrencyLabel();
+    applyCardTheme();
+    applyLanguage();
+
     if (currentUser) {
         showMainDashboard();
     } else {
@@ -58,6 +292,43 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function setupEventListeners() {
+    document.getElementById('languageSelector').addEventListener('change', event => {
+        const selectedLanguage = event.target.value;
+        if (!['en', 'id'].includes(selectedLanguage)) {
+            alert("Language selection is invalid.");
+            event.target.value = currentLanguage;
+            return;
+        }
+        currentLanguage = selectedLanguage;
+        localStorage.setItem('fintech_language', currentLanguage);
+        applyLanguage();
+    });
+
+    document.getElementById('currencySelector').addEventListener('change', (event) => {
+        const selectedCurrency = event.target.value;
+        if (!['USD', 'IDR'].includes(selectedCurrency)) {
+            alert("Pilihan mata uang tidak valid.");
+            event.target.value = currentCurrency;
+            return;
+        }
+
+        const amountInput = document.getElementById('txAmount');
+        const currentAmount = parseTransactionAmount(amountInput.value);
+        currentCurrency = selectedCurrency;
+        localStorage.setItem('fintech_currency', currentCurrency);
+        updateCurrencyLabel();
+        if (Number.isFinite(currentAmount)) {
+            amountInput.value = formatTransactionAmountValue(
+                currentCurrency === 'IDR' ? String(Math.round(currentAmount)) : currentAmount.toFixed(2)
+            );
+        }
+        if (currentUser) {
+            updateDashboardUI();
+            updateReportUI();
+        }
+    });
+    document.getElementById('txAmount').addEventListener('input', formatTransactionAmountInput);
+
     // Login Form Listener
     document.getElementById('loginForm').addEventListener('submit', (e) => {
         e.preventDefault();
@@ -99,6 +370,71 @@ function setupEventListeners() {
         persistUsersDB();
         setActiveSession(newUser);
         showMainDashboard();
+    });
+
+    document.getElementById('editProfileForm').addEventListener('submit', event => {
+        event.preventDefault();
+        const age = Number(document.getElementById('editProfileAge').value);
+        if (!Number.isInteger(age) || age < 1 || age > 130) {
+            alert(translate('invalidAge'));
+            return;
+        }
+
+        const previousProfile = {
+            name: currentUser.name,
+            age: currentUser.age
+        };
+        currentUser.name = document.getElementById('editProfileName').value.trim();
+        currentUser.age = age;
+        try {
+            saveUserData();
+        } catch (error) {
+            Object.assign(currentUser, previousProfile);
+            alert(translate('changesSaveFailed'));
+            return;
+        }
+
+        document.getElementById('userNameDisplay').textContent = currentUser.name;
+        document.getElementById('accountUserName').textContent = currentUser.name;
+        document.getElementById('accountAvatar').textContent = currentUser.name.charAt(0).toUpperCase();
+        document.getElementById('profileIdValue').textContent = currentUser.userId;
+    });
+
+    document.getElementById('passwordForm').addEventListener('submit', event => {
+        event.preventDefault();
+        const currentPassword = document.getElementById('currentPassword').value.trim();
+        const newPassword = document.getElementById('newPassword').value.trim();
+        const confirmPassword = document.getElementById('confirmNewPassword').value.trim();
+        const message = document.getElementById('passwordFormMessage');
+        message.classList.remove('hidden', 'text-emerald-600', 'text-rose-600');
+        message.classList.add('text-rose-600');
+
+        if (currentPassword !== currentUser.password) {
+            message.textContent = translate('incorrectPassword');
+            return;
+        }
+        if (newPassword !== confirmPassword) {
+            message.textContent = translate('passwordMismatch');
+            return;
+        }
+        if (newPassword.length < 6) {
+            message.textContent = translate('passwordTooShort');
+            return;
+        }
+
+        const previousPassword = currentUser.password;
+        currentUser.password = newPassword;
+        try {
+            saveUserData();
+        } catch (error) {
+            currentUser.password = previousPassword;
+            message.textContent = translate('passwordUpdateFailed');
+            return;
+        }
+        message.classList.remove('text-rose-600');
+        message.classList.add('text-emerald-600');
+        message.textContent = translate('passwordUpdated');
+        document.getElementById('passwordForm').reset();
     });
 
     document.getElementById('calculatorModal').addEventListener('click', (e) => {
@@ -162,14 +498,15 @@ function showAuthScreen() {
 function showMainDashboard() {
     document.getElementById('authScreen').classList.add('hidden');
     document.getElementById('mainDashboard').classList.remove('hidden');
+    ensureUserProfile();
     
     // Set User Info
     document.getElementById('userNameDisplay').textContent = currentUser.name;
-    document.getElementById('userAvatar').textContent = currentUser.name.charAt(0).toUpperCase();
+    document.getElementById('accountUserName').textContent = currentUser.name;
+    document.getElementById('accountAvatar').textContent = currentUser.name.charAt(0).toUpperCase();
     
     // Set Current Date Header
-    const options = { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' };
-    document.getElementById('currentDateHeader').textContent = new Date().toLocaleDateString('id-ID', options);
+    applyLanguage();
 
     updateDashboardUI();
     switchTab('home');
@@ -184,7 +521,7 @@ function logoutUser() {
 
 // TAB NAVIGASI UTAMA
 function switchTab(tabName) {
-    const tabs = ['home', 'history', 'report'];
+    const tabs = ['home', 'history', 'report', 'account'];
     tabs.forEach(t => {
         const el = document.getElementById(`tab${t.charAt(0).toUpperCase() + t.slice(1)}`);
         const navEl = document.getElementById(`nav${t.charAt(0).toUpperCase() + t.slice(1)}`);
@@ -227,7 +564,7 @@ function toggleBalanceSensor() {
 function updateBalanceDisplay() {
     if (!isBalanceSensorHidden) {
         const balance = currentUser.balance || 0;
-        document.getElementById('displayBalance').textContent = `$${balance.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+        document.getElementById('displayBalance').textContent = formatMoney(balance);
     }
 }
 
@@ -245,7 +582,7 @@ function closeTransactionModal() {
 
 function openCalculator() {
     const amountInput = document.getElementById('txAmount');
-    const initialValue = Number(amountInput.value);
+    const initialValue = parseTransactionAmount(amountInput.value);
     calculatorDisplayValue = amountInput.value && Number.isFinite(initialValue)
         ? String(initialValue)
         : '0';
@@ -335,7 +672,10 @@ function calculatorInput(key) {
             updateCalculatorDisplay();
             return;
         }
-        document.getElementById('txAmount').value = calculatorDisplayValue;
+        const calculatorResult = Number(calculatorDisplayValue);
+        document.getElementById('txAmount').value = formatTransactionAmountValue(
+            currentCurrency === 'IDR' ? String(Math.round(calculatorResult)) : calculatorDisplayValue
+        );
         closeCalculator();
         return;
     } else if (/^\d$/.test(key) || key === '.') {
@@ -362,18 +702,18 @@ function setModalType(type) {
     if (type === 'expense') {
         expBtn.className = "py-2 text-xs font-semibold rounded-lg bg-white shadow-sm text-gray-900 transition";
         incBtn.className = "py-2 text-xs font-semibold rounded-lg text-gray-500 transition";
-        modalTitle.textContent = "Tambah Pengeluaran Baru";
+        modalTitle.textContent = translate('expenseTitle');
     } else {
         incBtn.className = "py-2 text-xs font-semibold rounded-lg bg-white shadow-sm text-gray-900 transition";
         expBtn.className = "py-2 text-xs font-semibold rounded-lg text-gray-500 transition";
-        modalTitle.textContent = "Tambah Pemasukan Baru";
+        modalTitle.textContent = translate('incomeTitle');
     }
 }
 
 function handleTransactionSubmit(e) {
     e.preventDefault();
     const type = document.getElementById('txType').value;
-    const amount = parseFloat(document.getElementById('txAmount').value);
+    const amount = parseTransactionAmount(document.getElementById('txAmount').value);
     const title = document.getElementById('txTitle').value.trim();
     const category = document.getElementById('txCategory').value;
 
@@ -432,7 +772,7 @@ function deleteTransaction(transactionIndex) {
         return;
     }
 
-    if (!confirm(`Hapus transaksi "${transaction.title}" sebesar $${amount.toFixed(2)}? Saldo akan disesuaikan.`)) {
+    if (!confirm(`Hapus transaksi "${transaction.title}" sebesar ${formatMoney(amount)}? Saldo akan disesuaikan.`)) {
         return;
     }
 
@@ -465,7 +805,7 @@ function updateDashboardUI() {
         }
     });
 
-    document.getElementById('homeTotalSpent').textContent = `$${totalSpent.toLocaleString('en-US', {minimumFractionDigits: 0})}`;
+    document.getElementById('homeTotalSpent').textContent = formatMoney(totalSpent);
     
     let foodPct = totalSpent > 0 ? Math.round((catTotals["Food & Drinks"] / totalSpent) * 100) : 0;
     let transPct = totalSpent > 0 ? Math.round((catTotals["Transport"] / totalSpent) * 100) : 0;
@@ -479,7 +819,7 @@ function updateDashboardUI() {
     recentContainer.innerHTML = '';
 
     if (txs.length === 0) {
-        recentContainer.innerHTML = `<p class="text-xs text-gray-400 text-center py-4">Belum ada transaksi.</p>`;
+        recentContainer.innerHTML = `<p class="text-xs text-gray-400 text-center py-4">${currentLanguage === 'id' ? 'Belum ada transaksi.' : 'No transactions yet.'}</p>`;
     } else {
         txs.slice(0, 3).forEach(t => {
             const isInc = t.type === 'income';
@@ -497,10 +837,10 @@ function updateDashboardUI() {
                     </div>
                     <div>
                         <h5 class="text-xs font-bold text-gray-900">${t.title}</h5>
-                        <p class="text-[10px] text-gray-400">${t.category} • ${new Date(t.date).toLocaleDateString()}</p>
+                        <p class="text-[10px] text-gray-400">${translateCategory(t.category)} • ${new Date(t.date).toLocaleDateString(currentLanguage === 'id' ? 'id-ID' : 'en-US')}</p>
                     </div>
                 </div>
-                <span class="text-xs font-bold ${colorClass}">${sign}$${t.amount.toFixed(2)}</span>
+                <span class="text-xs font-bold ${colorClass}">${sign}${formatMoney(t.amount)}</span>
             `;
             recentContainer.appendChild(div);
         });
@@ -515,7 +855,7 @@ function renderFullHistory() {
     const txs = currentUser.transactions || [];
 
     if (txs.length === 0) {
-        container.innerHTML = `<p class="text-xs text-gray-400 text-center py-8">Belum ada riwayat transaksi.</p>`;
+        container.innerHTML = `<p class="text-xs text-gray-400 text-center py-8">${currentLanguage === 'id' ? 'Belum ada riwayat transaksi.' : 'No transaction history yet.'}</p>`;
         return;
     }
 
@@ -533,11 +873,11 @@ function renderFullHistory() {
                 </div>
                 <div class="min-w-0">
                     <h5 class="text-xs font-bold text-gray-900">${t.title}</h5>
-                    <p class="text-[10px] text-gray-400">${t.category} • ${new Date(t.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+                    <p class="text-[10px] text-gray-400">${translateCategory(t.category)} • ${new Date(t.date).toLocaleTimeString(currentLanguage === 'id' ? 'id-ID' : 'en-US', {hour: '2-digit', minute:'2-digit'})}</p>
                 </div>
             </div>
             <div class="flex items-center space-x-2 shrink-0">
-                <span class="text-xs font-bold ${colorClass}">${sign}$${t.amount.toFixed(2)}</span>
+                <span class="text-xs font-bold ${colorClass}">${sign}${formatMoney(t.amount)}</span>
                 <button type="button" onclick="deleteTransaction(${index})" aria-label="Hapus transaksi" title="Hapus transaksi" class="w-8 h-8 rounded-lg text-gray-400 hover:text-rose-600 hover:bg-rose-50 transition">
                     <i class="fa-solid fa-trash-can text-xs"></i>
                 </button>
@@ -563,18 +903,18 @@ function updateReportUI() {
         }
     });
 
-    document.getElementById('reportTotalSalary').textContent = `$${totalSalary.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
-    document.getElementById('reportTotalExpense').textContent = `$${totalSpent.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
-    document.getElementById('reportChartCenterText').textContent = totalSpent > 0 ? `$${totalSpent.toFixed(0)}` : '$0';
+    document.getElementById('reportTotalSalary').textContent = formatMoney(totalSalary);
+    document.getElementById('reportTotalExpense').textContent = formatMoney(totalSpent);
+    document.getElementById('reportChartCenterText').textContent = formatMoney(totalSpent);
 
     const legendList = document.getElementById('reportLegendList');
     legendList.innerHTML = '';
 
     const categories = [
-        { name: 'Food & Drinks', color: 'bg-indigo-600', val: catTotals["Food & Drinks"] },
-        { name: 'Transport', color: 'bg-amber-400', val: catTotals["Transport"] },
-        { name: 'Shopping', color: 'bg-purple-400', val: catTotals["Shopping"] },
-        { name: 'Other', color: 'bg-gray-300', val: catTotals["Other"] }
+        { name: translate('foodDrinks'), color: 'bg-indigo-600', val: catTotals["Food & Drinks"] },
+        { name: translate('transport'), color: 'bg-amber-400', val: catTotals["Transport"] },
+        { name: translate('shopping'), color: 'bg-purple-400', val: catTotals["Shopping"] },
+        { name: translate('other'), color: 'bg-gray-300', val: catTotals["Other"] }
     ];
 
     categories.forEach(c => {
@@ -583,7 +923,7 @@ function updateReportUI() {
         row.className = "flex items-center justify-between";
         row.innerHTML = `
             <span class="flex items-center space-x-2 text-gray-600"><span class="w-2.5 h-2.5 rounded-full ${c.color}"></span><span>${c.name}</span></span>
-            <span class="font-semibold text-gray-900">${pct}% ($${c.val.toFixed(2)})</span>
+            <span class="font-semibold text-gray-900">${pct}% (${formatMoney(c.val)})</span>
         `;
         legendList.appendChild(row);
     });
