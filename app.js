@@ -29,6 +29,7 @@ const savedCardTheme = localStorage.getItem('fintech_card_theme');
 let currentCardTheme = ['black', 'blue', 'green', 'gold'].includes(savedCardTheme) ? savedCardTheme : 'blue';
 const savedLanguage = localStorage.getItem('fintech_language');
 let currentLanguage = savedLanguage === 'en' ? 'en' : 'id';
+let displayedCalendarMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
 
 const translations = {
     en: {
@@ -135,7 +136,10 @@ function applyLanguage() {
     });
     if (currentUser) {
         updateDashboardUI();
-        if (!document.getElementById('tabReport').classList.contains('hidden')) updateReportUI();
+        if (!document.getElementById('tabReport').classList.contains('hidden')) {
+            renderMiniCalendar();
+            updateReportUI();
+        }
     }
 }
 
@@ -789,6 +793,8 @@ function handleTransactionSubmit(e) {
     saveUserData();
     closeTransactionModal();
     updateDashboardUI();
+    displayedCalendarMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+    renderMiniCalendar();
 }
 
 function saveUserData() {
@@ -829,6 +835,7 @@ function deleteTransaction(transactionIndex) {
     transactions.splice(transactionIndex, 1);
     saveUserData();
     updateDashboardUI();
+    renderMiniCalendar();
 }
 
 // UPDATE DASHBOARD & RENDER UI
@@ -980,20 +987,88 @@ function updateReportUI() {
 
 function renderMiniCalendar() {
     const grid = document.getElementById('miniCalendarGrid');
+    const monthTitle = document.getElementById('calMonthTitle');
+    const year = displayedCalendarMonth.getFullYear();
+    const month = displayedCalendarMonth.getMonth();
+    const monthLabel = displayedCalendarMonth.toLocaleDateString(currentLanguage === 'id' ? 'id-ID' : 'en-US', {
+        month: 'short',
+        year: 'numeric'
+    });
+    monthTitle.textContent = monthLabel;
+    document.getElementById('reportMonthYear').textContent =
+        displayedCalendarMonth.toLocaleDateString(currentLanguage === 'id' ? 'id-ID' : 'en-US', {
+            month: 'long',
+            year: 'numeric'
+        });
+
     grid.innerHTML = '';
-    for (let i = 0; i < 3; i++) {
+    const firstDayOffset = (new Date(year, month, 1).getDay() + 6) % 7;
+    for (let i = 0; i < firstDayOffset; i++) {
         const emptySpan = document.createElement('span');
+        emptySpan.setAttribute('aria-hidden', 'true');
         grid.appendChild(emptySpan);
     }
-    for (let day = 1; day <= 31; day++) {
+
+    const transactionsByDate = new Map();
+    (currentUser.transactions || []).forEach(transaction => {
+        const transactionDate = new Date(transaction.date);
+        if (Number.isNaN(transactionDate.getTime()) ||
+            transactionDate.getFullYear() !== year ||
+            transactionDate.getMonth() !== month) {
+            return;
+        }
+
+        const dateKey = `${transactionDate.getFullYear()}-${transactionDate.getMonth()}-${transactionDate.getDate()}`;
+        if (!transactionsByDate.has(dateKey)) transactionsByDate.set(dateKey, []);
+        transactionsByDate.get(dateKey).push(transaction);
+    });
+
+    const today = new Date();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    for (let day = 1; day <= daysInMonth; day++) {
         const span = document.createElement('span');
         span.textContent = day;
-        span.className = "py-1 rounded-full text-xs cursor-pointer";
-        if (day === 13) {
-            span.className += " bg-indigo-600 text-white font-bold shadow-sm";
-        } else {
-            span.className += " hover:bg-gray-100 text-gray-700";
+        span.className = 'calendar-day';
+        span.setAttribute('aria-label', new Date(year, month, day).toLocaleDateString(
+            currentLanguage === 'id' ? 'id-ID' : 'en-US',
+            { day: 'numeric', month: 'long', year: 'numeric' }
+        ));
+
+        const dateKey = `${year}-${month}-${day}`;
+        const dayTransactions = transactionsByDate.get(dateKey) || [];
+        const expenses = dayTransactions.filter(transaction => transaction.type === 'expense');
+        const dominantExpense = expenses.reduce((largest, transaction) => {
+            const amount = Number(transaction.amount);
+            return Number.isFinite(amount) && (!largest || amount > Number(largest.amount))
+                ? transaction
+                : largest;
+        }, null);
+
+        if (dominantExpense) {
+            const expenseTheme = {
+                'Food & Drinks': 'food',
+                Transport: 'transport',
+                Shopping: 'shopping'
+            }[dominantExpense.category];
+            if (expenseTheme) span.classList.add(`calendar-day-${expenseTheme}`);
+        } else if (dayTransactions.some(transaction =>
+            transaction.type === 'income' || String(transaction.category).toLowerCase() === 'savings'
+        )) {
+            span.classList.add('calendar-day-income');
+        }
+
+        if (today.getFullYear() === year && today.getMonth() === month && today.getDate() === day) {
+            span.classList.add('calendar-day-today');
         }
         grid.appendChild(span);
     }
+}
+
+function changeCalendarMonth(monthOffset) {
+    displayedCalendarMonth = new Date(
+        displayedCalendarMonth.getFullYear(),
+        displayedCalendarMonth.getMonth() + monthOffset,
+        1
+    );
+    renderMiniCalendar();
 }

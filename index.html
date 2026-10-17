@@ -218,8 +218,8 @@
                     <div class="flex justify-between items-center">
                         <span class="text-xs font-bold text-gray-800 flex items-center space-x-1.5"><i class="fa-regular fa-calendar-days text-indigo-600"></i><span id="calMonthTitle">Oct 2026</span></span>
                         <div class="flex space-x-1 text-gray-400">
-                            <button class="w-6 h-6 flex items-center justify-center hover:bg-gray-100 rounded"><i class="fa-solid fa-chevron-left text-[10px]"></i></button>
-                            <button class="w-6 h-6 flex items-center justify-center hover:bg-gray-100 rounded"><i class="fa-solid fa-chevron-right text-[10px]"></i></button>
+                            <button id="calendarPrevMonth" type="button" aria-label="Bulan sebelumnya" onclick="changeCalendarMonth(-1)" class="w-6 h-6 flex items-center justify-center hover:bg-gray-100 rounded"><i class="fa-solid fa-chevron-left text-[10px]"></i></button>
+                            <button id="calendarNextMonth" type="button" aria-label="Bulan berikutnya" onclick="changeCalendarMonth(1)" class="w-6 h-6 flex items-center justify-center hover:bg-gray-100 rounded"><i class="fa-solid fa-chevron-right text-[10px]"></i></button>
                         </div>
                     </div>
                     <div class="grid grid-cols-7 text-center text-[10px] font-semibold text-gray-400">
