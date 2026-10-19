@@ -1,0 +1,38 @@
+{
+  "categories": [
+    {
+      "value": "Food & Drinks",
+      "translationKey": "foodDrinks",
+      "reportKey": "food",
+      "reportColor": "bg-indigo-600",
+      "showInHomeBreakdown": true,
+      "calendarTheme": "food"
+    },
+    {
+      "value": "Transport",
+      "translationKey": "transport",
+      "reportKey": "transport",
+      "reportColor": "bg-amber-400",
+      "showInHomeBreakdown": true,
+      "calendarTheme": "transport"
+    },
+    {
+      "value": "Shopping",
+      "translationKey": "shopping",
+      "reportKey": "shopping",
+      "reportColor": "bg-purple-400",
+      "showInHomeBreakdown": true,
+      "calendarTheme": "shopping"
+    },
+    {
+      "value": "Salary",
+      "translationKey": "income"
+    },
+    {
+      "value": "Other",
+      "translationKey": "other",
+      "reportKey": "other",
+      "reportColor": "bg-gray-300"
+    }
+  ]
+}

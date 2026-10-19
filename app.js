@@ -30,6 +30,7 @@ let currentCardTheme = ['black', 'blue', 'green', 'gold'].includes(savedCardThem
 const savedLanguage = localStorage.getItem('fintech_language');
 let currentLanguage = savedLanguage === 'en' ? 'en' : 'id';
 let displayedCalendarMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+let appConfig = null;
 
 const translations = {
     en: {
@@ -123,6 +124,106 @@ function translate(key) {
     return translations[currentLanguage][key] || translations.en[key] || key;
 }
 
+function getExpenseCategories() {
+    return appConfig.categories.filter(category => typeof category.reportKey === 'string');
+}
+
+function getExpenseCategoryTotals(transactions) {
+    const categories = getExpenseCategories();
+    const totals = Object.fromEntries(categories.map(category => [category.reportKey, 0]));
+    const otherCategory = categories.find(category => category.value === 'Other');
+
+    transactions.forEach(transaction => {
+        if (transaction.type !== 'expense') return;
+        const category = appConfig.categories.find(item => item.value === transaction.category);
+        const reportKey = category && category.reportKey ? category.reportKey : otherCategory.reportKey;
+        totals[reportKey] += Number(transaction.amount) || 0;
+    });
+    return totals;
+}
+
+function populateCategoryOptions() {
+    const select = document.getElementById('txCategory');
+    select.replaceChildren();
+    appConfig.categories.forEach(category => {
+        const option = document.createElement('option');
+        option.value = category.value;
+        option.textContent = translate(category.translationKey);
+        select.appendChild(option);
+    });
+}
+
+function renderHomeBreakdown(totals, totalSpent) {
+    const container = document.getElementById('homeBreakdownList');
+    container.replaceChildren();
+
+    getExpenseCategories().filter(category => category.showInHomeBreakdown).forEach(category => {
+        const row = document.createElement('div');
+        row.className = 'flex items-center justify-between';
+        const percentage = totalSpent > 0
+            ? Math.round((totals[category.reportKey] / totalSpent) * 100)
+            : 0;
+        row.innerHTML = `
+            <span class="flex items-center space-x-1.5 text-gray-600">
+                <span class="w-2 h-2 rounded-full ${category.reportColor}"></span>
+                <span>${translate(category.translationKey)}</span>
+            </span>
+            <span class="font-semibold text-gray-900">${percentage}%</span>
+        `;
+        container.appendChild(row);
+    });
+}
+
+async function loadAppConfig() {
+    const response = await fetch('./config.json');
+    if (!response.ok) {
+        throw new Error(`config.json returned HTTP ${response.status}`);
+    }
+
+    const config = await response.json();
+    if (!config || !Array.isArray(config.categories) ||
+        !config.categories.every(category =>
+            category &&
+            typeof category.value === 'string' &&
+            typeof category.translationKey === 'string'
+        ) ||
+        !config.categories.some(category =>
+            category.value === 'Other' &&
+            typeof category.reportKey === 'string' &&
+            typeof category.reportColor === 'string'
+        ) ||
+        new Set(config.categories.map(category => category.value)).size !== config.categories.length) {
+        throw new Error('config.json has an invalid categories definition');
+    }
+    if (config.categories.some(category =>
+        category.reportKey !== undefined &&
+        (typeof category.reportKey !== 'string' ||
+            typeof category.reportColor !== 'string')
+    )) {
+        throw new Error('config.json has invalid report category settings');
+    }
+    const reportKeys = config.categories
+        .filter(category => typeof category.reportKey === 'string')
+        .map(category => category.reportKey);
+    if (new Set(reportKeys).size !== reportKeys.length) {
+        throw new Error('config.json contains duplicate report keys');
+    }
+
+    appConfig = config;
+}
+
+function showConfigLoadError(error) {
+    console.error('Unable to load app configuration:', error);
+    const message = document.createElement('p');
+    message.className = 'mx-6 mb-4 rounded-xl bg-rose-50 p-3 text-sm text-rose-700';
+    message.setAttribute('role', 'alert');
+    message.textContent = 'Konfigurasi kategori gagal dimuat. Jalankan aplikasi melalui server lokal (HTTP), lalu muat ulang halaman.';
+    document.getElementById('authScreen').appendChild(message);
+    document.querySelectorAll('#authScreen input, #authScreen button').forEach(element => {
+        element.disabled = true;
+    });
+}
+
 function applyLanguage() {
     document.documentElement.lang = currentLanguage;
     document.getElementById('languageSelector').value = currentLanguage;
@@ -134,6 +235,7 @@ function applyLanguage() {
         element.setAttribute('aria-label', label);
         element.title = label;
     });
+    if (appConfig) populateCategoryOptions();
     if (currentUser) {
         updateDashboardUI();
         if (!document.getElementById('tabReport').classList.contains('hidden')) {
@@ -144,14 +246,8 @@ function applyLanguage() {
 }
 
 function translateCategory(category) {
-    const categoryKeys = {
-        'Food & Drinks': 'foodDrinks',
-        Transport: 'transport',
-        Shopping: 'shopping',
-        Other: 'other',
-        Salary: 'income'
-    };
-    return categoryKeys[category] ? translate(categoryKeys[category]) : category;
+    const categoryConfig = appConfig.categories.find(item => item.value === category);
+    return categoryConfig ? translate(categoryConfig.translationKey) : category;
 }
 
 function createUserId() {
@@ -316,9 +412,17 @@ function loginAsGuest() {
     showMainDashboard();
 }
 
-// Inisialisasi Aplikasi saat DOM Siap
-document.addEventListener('DOMContentLoaded', () => {
+// Inisialisasi menunggu konfigurasi kategori dari config.json.
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        await loadAppConfig();
+    } catch (error) {
+        showConfigLoadError(error);
+        return;
+    }
+
     document.getElementById('currencySelector').value = currentCurrency;
+    populateCategoryOptions();
     updateCurrencyLabel();
     applyCardTheme();
     applyLanguage();
@@ -609,10 +713,25 @@ function toggleBalanceSensor() {
 }
 
 function updateBalanceDisplay() {
+    updateDailyAllowance();
     if (!isBalanceSensorHidden) {
         const balance = currentUser.balance || 0;
         document.getElementById('displayBalance').textContent = formatMoney(balance);
     }
+}
+
+function updateDailyAllowance() {
+    const allowanceElement = document.getElementById('dailyAllowance');
+    const balance = Number(currentUser && currentUser.balance);
+    const today = new Date();
+    const daysRemaining = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate() - today.getDate() + 1;
+    const dailyAllowance = Number.isFinite(balance) && daysRemaining > 0 ? balance / daysRemaining : 0;
+    const warningThreshold = currentCurrency === 'IDR' ? 20000 : 1.5;
+
+    allowanceElement.textContent = isBalanceSensorHidden
+        ? `${currentLanguage === 'id' ? 'Jatah aman harian' : 'Safe daily budget'}: ****`
+        : `${currentLanguage === 'id' ? 'Jatah aman harian' : 'Safe daily budget'}: ${formatMoney(dailyAllowance)}`;
+    allowanceElement.classList.toggle('daily-allowance-warning', !isBalanceSensorHidden && dailyAllowance < warningThreshold);
 }
 
 // MODAL TRANSAKSI (TAMBAH PEMASUKAN / PENGELUARAN)
@@ -764,14 +883,35 @@ function handleTransactionSubmit(e) {
     const title = document.getElementById('txTitle').value.trim();
     const category = document.getElementById('txCategory').value;
 
-    if (isNaN(amount) || amount <= 0) {
+    saveTransaction(type, amount, title, category);
+}
+
+function alertForGamblingTransaction(title) {
+    if (!/\b(judi|slot|gacor|depo)\b/i.test(title) || !window.speechSynthesis || !window.SpeechSynthesisUtterance) {
+        return;
+    }
+
+    const utterance = new SpeechSynthesisUtterance('Udah gede jangang gitu terus cok!');
+    utterance.lang = 'id-ID';
+    utterance.rate = 1.35;
+    utterance.pitch = 1.25;
+    utterance.volume = 1.0;
+    window.speechSynthesis.speak(utterance);
+}
+
+function saveTransaction(type, amount, title, category) {
+    if (!Number.isFinite(amount) || amount <= 0) {
         alert("Masukkan jumlah nominal yang valid.");
+        return;
+    }
+    if (!currentUser || !['income', 'expense'].includes(type)) {
+        alert("Transaksi tidak dapat disimpan.");
         return;
     }
 
     const newTx = {
         id: Date.now(),
-        type: type, // 'income' or 'expense'
+        type: type,
         title: title,
         category: category,
         amount: amount,
@@ -795,6 +935,7 @@ function handleTransactionSubmit(e) {
     updateDashboardUI();
     displayedCalendarMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
     renderMiniCalendar();
+    alertForGamblingTransaction(title);
 }
 
 function saveUserData() {
@@ -846,30 +987,18 @@ function updateDashboardUI() {
     
     let totalSpent = 0;
     let totalSalary = 0;
-    let catTotals = { "Food & Drinks": 0, "Transport": 0, "Shopping": 0, "Other": 0 };
 
     txs.forEach(t => {
         if (t.type === 'expense') {
             totalSpent += t.amount;
-            if (catTotals[t.category] !== undefined) {
-                catTotals[t.category] += t.amount;
-            } else {
-                catTotals["Other"] += t.amount;
-            }
         } else if (t.type === 'income') {
             totalSalary += t.amount;
         }
     });
+    const catTotals = getExpenseCategoryTotals(txs);
 
     document.getElementById('homeTotalSpent').textContent = formatMoney(totalSpent);
-    
-    let foodPct = totalSpent > 0 ? Math.round((catTotals["Food & Drinks"] / totalSpent) * 100) : 0;
-    let transPct = totalSpent > 0 ? Math.round((catTotals["Transport"] / totalSpent) * 100) : 0;
-    let shopPct = totalSpent > 0 ? Math.round((catTotals["Shopping"] / totalSpent) * 100) : 0;
-
-    document.getElementById('breakdownFood').textContent = `${foodPct}%`;
-    document.getElementById('breakdownTransport').textContent = `${transPct}%`;
-    document.getElementById('breakdownShopping').textContent = `${shopPct}%`;
+    renderHomeBreakdown(catTotals, totalSpent);
 
     const recentContainer = document.getElementById('recentExpensesList');
     recentContainer.innerHTML = '';
@@ -947,17 +1076,15 @@ function updateReportUI() {
     const txs = currentUser.transactions || [];
     let totalSpent = 0;
     let totalSalary = 0;
-    let catTotals = { "Food & Drinks": 0, "Transport": 0, "Shopping": 0, "Other": 0 };
 
     txs.forEach(t => {
         if (t.type === 'expense') {
             totalSpent += t.amount;
-            if (catTotals[t.category] !== undefined) catTotals[t.category] += t.amount;
-            else catTotals["Other"] += t.amount;
         } else if (t.type === 'income') {
             totalSalary += t.amount;
         }
     });
+    const catTotals = getExpenseCategoryTotals(txs);
 
     document.getElementById('reportTotalSalary').textContent = formatMoney(totalSalary);
     document.getElementById('reportTotalExpense').textContent = formatMoney(totalSpent);
@@ -966,20 +1093,14 @@ function updateReportUI() {
     const legendList = document.getElementById('reportLegendList');
     legendList.innerHTML = '';
 
-    const categories = [
-        { name: translate('foodDrinks'), color: 'bg-indigo-600', val: catTotals["Food & Drinks"] },
-        { name: translate('transport'), color: 'bg-amber-400', val: catTotals["Transport"] },
-        { name: translate('shopping'), color: 'bg-purple-400', val: catTotals["Shopping"] },
-        { name: translate('other'), color: 'bg-gray-300', val: catTotals["Other"] }
-    ];
-
-    categories.forEach(c => {
-        const pct = totalSpent > 0 ? Math.round((c.val / totalSpent) * 100) : 0;
+    getExpenseCategories().forEach(category => {
+        const amount = catTotals[category.reportKey];
+        const pct = totalSpent > 0 ? Math.round((amount / totalSpent) * 100) : 0;
         const row = document.createElement('div');
         row.className = "flex items-center justify-between";
         row.innerHTML = `
-            <span class="flex items-center space-x-2 text-gray-600"><span class="w-2.5 h-2.5 rounded-full ${c.color}"></span><span>${c.name}</span></span>
-            <span class="font-semibold text-gray-900">${pct}% (${formatMoney(c.val)})</span>
+            <span class="flex items-center space-x-2 text-gray-600"><span class="w-2.5 h-2.5 rounded-full ${category.reportColor}"></span><span>${translate(category.translationKey)}</span></span>
+            <span class="font-semibold text-gray-900">${pct}% (${formatMoney(amount)})</span>
         `;
         legendList.appendChild(row);
     });
@@ -1045,12 +1166,10 @@ function renderMiniCalendar() {
         }, null);
 
         if (dominantExpense) {
-            const expenseTheme = {
-                'Food & Drinks': 'food',
-                Transport: 'transport',
-                Shopping: 'shopping'
-            }[dominantExpense.category];
-            if (expenseTheme) span.classList.add(`calendar-day-${expenseTheme}`);
+            const category = appConfig.categories.find(item => item.value === dominantExpense.category);
+            if (category && category.calendarTheme) {
+                span.classList.add(`calendar-day-${category.calendarTheme}`);
+            }
         } else if (dayTransactions.some(transaction =>
             transaction.type === 'income' || String(transaction.category).toLowerCase() === 'savings'
         )) {
