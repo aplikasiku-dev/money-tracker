@@ -12,6 +12,10 @@ body {
     scrollbar-width: none;
 }
 
+.history-transaction {
+    touch-action: pan-y;
+}
+
 /* Animasi Keyframes untuk efek transisi halus (smooth fade-in) */
 @keyframes fadeIn {
     from {
@@ -79,6 +83,32 @@ body {
     transition: background 0.25s ease;
 }
 
+.wallet-card #walletCardPrimaryValue {
+    max-width: 180px;
+    overflow-wrap: anywhere;
+}
+
+.wallet-card #walletCardSecondaryValue {
+    max-width: 180px;
+    overflow-wrap: anywhere;
+}
+
+.transaction-type-button {
+    min-height: 40px;
+    background: #fff;
+    color: #4b5563;
+}
+
+.transaction-type-button[aria-pressed="true"] {
+    background: #4f46e5;
+    color: #fff;
+    box-shadow: 0 1px 2px rgba(17, 24, 39, 0.12);
+}
+
+.transaction-type-button:not([aria-pressed="true"]):hover {
+    background: #e5e7eb;
+}
+
 .card-theme-black {
     background: linear-gradient(135deg, #111827, #374151);
 }
@@ -124,28 +154,12 @@ body {
     transition: filter 0.15s, box-shadow 0.15s;
 }
 
-.calendar-day-food {
-    background: #1e3a8a;
+.calendar-day-payment {
+    background: #dc2626;
     color: #fff;
 }
 
-.calendar-day-transport {
-    background: #7dd3fc;
-    color: #111827;
-}
-
-.calendar-day-shopping {
-    background: #fbbf24;
-    color: #111827;
-}
-
-.calendar-day-income {
-    background: #4ade80;
-    color: #111827;
-}
-
 .calendar-day-today {
-    box-shadow: inset 0 0 0 2px #6366f1;
     font-weight: 700;
 }
 

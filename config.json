@@ -5,24 +5,21 @@
       "translationKey": "foodDrinks",
       "reportKey": "food",
       "reportColor": "bg-indigo-600",
-      "showInHomeBreakdown": true,
-      "calendarTheme": "food"
+      "showInHomeBreakdown": true
     },
     {
       "value": "Transport",
       "translationKey": "transport",
       "reportKey": "transport",
       "reportColor": "bg-amber-400",
-      "showInHomeBreakdown": true,
-      "calendarTheme": "transport"
+      "showInHomeBreakdown": true
     },
     {
       "value": "Shopping",
       "translationKey": "shopping",
       "reportKey": "shopping",
       "reportColor": "bg-purple-400",
-      "showInHomeBreakdown": true,
-      "calendarTheme": "shopping"
+      "showInHomeBreakdown": true
     },
     {
       "value": "Salary",

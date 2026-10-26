@@ -31,6 +31,8 @@ const savedLanguage = localStorage.getItem('fintech_language');
 let currentLanguage = savedLanguage === 'en' ? 'en' : 'id';
 let displayedCalendarMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
 let appConfig = null;
+let historyTypeFilter = 'all';
+let activeHistoryFilter = 'all';
 
 const translations = {
     en: {
@@ -48,8 +50,14 @@ const translations = {
         updatePassword: 'Update Password', home: 'Home', history: 'History', report: 'Report',
         transactionTitle: 'Add New Transaction', expenseTitle: 'Add New Expense', incomeTitle: 'Add New Income',
         expense: 'Expense', income: 'Income', amount: 'Amount', transactionName: 'Transaction Name',
-        category: 'Category', saveTransaction: 'Save Transaction', calculator: 'Amount Calculator',
-        liveUpdates: 'Live updates',
+        category: 'Category', paymentMethod: 'Payment Method', uangKu: 'MY MONEY', selectPaymentMethod: 'Select payment method',
+        cash: 'Cash', transferTf: 'Transfer / Tf', savingsGoal: 'Savings Goal',
+        savingsGoalName: 'Goal Name', savingsGoalPlaceholder: 'Example: New Laptop / Vacation',
+        savingsGoalAmount: 'Goal Amount (Rp)', saveGoal: 'Save Goal',
+        saveTransaction: 'Save Transaction', calculator: 'Amount Calculator',
+        goalProgress: 'GOAL PROGRESS', goalAmount: 'GOAL AMOUNT',
+        liveUpdates: 'Live updates', noFilteredTransactions: 'No transactions match this filter.',
+        confirmDeleteTransaction: 'Are you sure you want to delete "{title}" ({amount})? Your balance will be adjusted.',
         allocated: 'Allocated', foodDrinks: 'Food & Drinks', transport: 'Transport', shopping: 'Shopping', other: 'Other',
         ageYears: 'years old',
         noValue: 'Not provided', invalidBirthDate: 'Date of birth cannot be in the future.',
@@ -74,8 +82,14 @@ const translations = {
         updatePassword: 'Perbarui Kata Sandi', home: 'Beranda', history: 'Riwayat', report: 'Laporan',
         transactionTitle: 'Tambah Transaksi Baru', expenseTitle: 'Tambah Pengeluaran Baru', incomeTitle: 'Tambah Pemasukan Baru',
         expense: 'Pengeluaran', income: 'Pemasukan', amount: 'Jumlah Nominal', transactionName: 'Nama / Judul Transaksi',
-        category: 'Kategori', saveTransaction: 'Simpan Transaksi', calculator: 'Kalkulator Nominal',
-        liveUpdates: 'Diperbarui langsung',
+        category: 'Kategori', paymentMethod: 'Metode Pembayaran', uangKu: 'UANG KU', selectPaymentMethod: 'Pilih metode pembayaran',
+        cash: 'Tunai (Cash)', transferTf: 'Transfer / Tf', savingsGoal: 'Target Nabung',
+        savingsGoalName: 'Nama Target', savingsGoalPlaceholder: 'Contoh: Beli Laptop / Liburan',
+        savingsGoalAmount: 'Nominal Target (Rp)', saveGoal: 'Simpan Target',
+        saveTransaction: 'Simpan Transaksi', calculator: 'Kalkulator Nominal',
+        goalProgress: 'PROGRES TARGET', goalAmount: 'NOMINAL TARGET',
+        liveUpdates: 'Diperbarui langsung', noFilteredTransactions: 'Tidak ada transaksi yang sesuai dengan filter ini.',
+        confirmDeleteTransaction: 'Apakah Anda yakin ingin menghapus "{title}" ({amount})? Saldo akan disesuaikan.',
         allocated: 'Dialokasikan', foodDrinks: 'Makanan & Minuman', transport: 'Transportasi', shopping: 'Belanja', other: 'Lainnya',
         ageYears: 'tahun',
         noValue: 'Belum diisi', invalidBirthDate: 'Tanggal lahir tidak boleh di masa depan.',
@@ -142,10 +156,13 @@ function getExpenseCategoryTotals(transactions) {
     return totals;
 }
 
-function populateCategoryOptions() {
+function populateCategoryOptions(type = 'expense') {
     const select = document.getElementById('txCategory');
     select.replaceChildren();
-    appConfig.categories.forEach(category => {
+    const categories = type === 'income'
+        ? appConfig.categories.filter(category => category.value === 'Salary')
+        : appConfig.categories.filter(category => category.value !== 'Salary');
+    categories.forEach(category => {
         const option = document.createElement('option');
         option.value = category.value;
         option.textContent = translate(category.translationKey);
@@ -235,7 +252,17 @@ function applyLanguage() {
         element.setAttribute('aria-label', label);
         element.title = label;
     });
-    if (appConfig) populateCategoryOptions();
+    document.querySelectorAll('[data-i18n-placeholder]').forEach(element => {
+        element.placeholder = translate(element.dataset.i18nPlaceholder);
+    });
+    const isSavingGoal = document.getElementById('txType').value === 'savingsGoal';
+    document.querySelector('#transactionForm button[type="submit"]').textContent =
+        translate(isSavingGoal ? 'saveGoal' : 'saveTransaction');
+    if (appConfig) {
+        const currentType = document.getElementById('txType').value;
+        populateCategoryOptions(currentType === 'income' ? 'income' : 'expense');
+        updatePaymentMethodOptions(currentType === 'income' ? 'income' : 'expense');
+    }
     if (currentUser) {
         updateDashboardUI();
         if (!document.getElementById('tabReport').classList.contains('hidden')) {
@@ -312,6 +339,22 @@ function formatMoney(amount) {
         return `Rp ${value.toLocaleString('id-ID', { maximumFractionDigits: 0 })}`;
     }
     return `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function formatRupiah(amount) {
+    return `Rp ${Number(amount).toLocaleString('id-ID', { maximumFractionDigits: 0 })}`;
+}
+
+function updateDigitalClock() {
+    const clock = document.getElementById('digitalClock');
+    if (!clock) return;
+    const time = new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Asia/Jakarta',
+        hour: '2-digit',
+        minute: '2-digit',
+        hourCycle: 'h23'
+    }).format(new Date());
+    clock.textContent = `${time} WIB`;
 }
 
 function parseTransactionAmount(value) {
@@ -423,9 +466,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     document.getElementById('currencySelector').value = currentCurrency;
     populateCategoryOptions();
+    updatePaymentMethodOptions('expense');
     updateCurrencyLabel();
     applyCardTheme();
     applyLanguage();
+    updateDigitalClock();
+    window.setInterval(updateDigitalClock, 60_000);
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) updateDigitalClock();
+    });
 
     if (currentUser) {
         showMainDashboard();
@@ -474,6 +523,10 @@ function setupEventListeners() {
         }
     });
     document.getElementById('txAmount').addEventListener('input', formatTransactionAmountInput);
+    document.getElementById('savingsGoalAmount').addEventListener('input', event => {
+        const digits = event.target.value.replace(/\D/g, '');
+        event.target.value = digits ? Number(digits).toLocaleString('id-ID') : '';
+    });
 
     // Login Form Listener
     document.getElementById('loginForm').addEventListener('submit', (e) => {
@@ -710,6 +763,7 @@ function toggleBalanceSensor() {
         icon.classList.add('fa-eye');
         updateBalanceDisplay();
     }
+    updateWalletGoalCard();
 }
 
 function updateBalanceDisplay() {
@@ -737,6 +791,10 @@ function updateDailyAllowance() {
 // MODAL TRANSAKSI (TAMBAH PEMASUKAN / PENGELUARAN)
 function openTransactionModal(type = 'expense') {
     document.getElementById('transactionModal').classList.remove('hidden');
+    if (type === 'savingsGoal' && currentUser.savingsGoal) {
+        document.getElementById('savingsGoalName').value = currentUser.savingsGoal.name;
+        document.getElementById('savingsGoalAmount').value = Number(currentUser.savingsGoal.amount).toLocaleString('id-ID');
+    }
     setModalType(type);
 }
 
@@ -858,32 +916,104 @@ function calculatorInput(key) {
     updateCalculatorDisplay();
 }
 
-function setModalType(type) {
-    const expBtn = document.getElementById('typeExpenseBtn');
-    const incBtn = document.getElementById('typeIncomeBtn');
-    const txTypeInput = document.getElementById('txType');
-    const modalTitle = document.getElementById('modalTitle');
+function updatePaymentMethodOptions(type) {
+    const select = document.getElementById('txPaymentMethod');
+    const label = document.querySelector('label[for="txPaymentMethod"]');
+    const selectedValue = select.value;
+    const isIncome = type === 'income';
+    const options = isIncome
+        ? [
+            { value: 'BANK', label: 'BANK' },
+            { value: 'E-WALLET', label: 'E-WALLET' },
+            { value: 'Cash', label: translate('cash') }
+        ]
+        : [
+            { value: 'Cash', label: translate('cash') },
+            { value: 'Transfer / Tf', label: translate('transferTf') },
+            { value: 'Other', label: translate('other') }
+        ];
 
-    txTypeInput.value = type;
-    if (type === 'expense') {
-        expBtn.className = "py-2 text-xs font-semibold rounded-lg bg-white shadow-sm text-gray-900 transition";
-        incBtn.className = "py-2 text-xs font-semibold rounded-lg text-gray-500 transition";
-        modalTitle.textContent = translate('expenseTitle');
-    } else {
-        incBtn.className = "py-2 text-xs font-semibold rounded-lg bg-white shadow-sm text-gray-900 transition";
-        expBtn.className = "py-2 text-xs font-semibold rounded-lg text-gray-500 transition";
-        modalTitle.textContent = translate('incomeTitle');
+    label.textContent = translate(isIncome ? 'uangKu' : 'paymentMethod');
+    select.replaceChildren();
+    options.forEach(optionData => {
+        const option = document.createElement('option');
+        option.value = optionData.value;
+        option.textContent = optionData.label;
+        select.appendChild(option);
+    });
+    if (options.some(option => option.value === selectedValue)) {
+        select.value = selectedValue;
     }
+}
+
+function setModalType(type) {
+    if (!['income', 'expense', 'savingsGoal'].includes(type)) return;
+
+    const buttons = {
+        income: document.getElementById('typeIncomeBtn'),
+        expense: document.getElementById('typeExpenseBtn'),
+        savingsGoal: document.getElementById('typeSavingsGoalBtn')
+    };
+    const isSavingsGoal = type === 'savingsGoal';
+    const isIncome = type === 'income';
+    const regularFields = [
+        'transactionAmountFields',
+        'transactionTitleField',
+        'transactionCategoryField',
+        'transactionPaymentMethodField'
+    ].map(id => document.getElementById(id));
+    const goalFields = document.getElementById('savingsGoalFields');
+
+    document.getElementById('txType').value = type;
+    Object.entries(buttons).forEach(([buttonType, button]) => {
+        const isActive = buttonType === type;
+        button.setAttribute('aria-pressed', String(isActive));
+        button.classList.toggle('bg-indigo-600', isActive);
+        button.classList.toggle('text-white', isActive);
+        button.classList.toggle('shadow-sm', isActive);
+        button.classList.toggle('bg-white', !isActive);
+        button.classList.toggle('text-gray-500', !isActive);
+    });
+    regularFields.forEach(field => {
+        field.classList.toggle('hidden', isSavingsGoal);
+        field.querySelectorAll('input, select, button').forEach(control => {
+            control.disabled = isSavingsGoal;
+        });
+    });
+    goalFields.classList.toggle('hidden', !isSavingsGoal);
+    goalFields.querySelectorAll('input').forEach(input => {
+        input.disabled = !isSavingsGoal;
+        input.required = isSavingsGoal;
+    });
+
+    if (appConfig) {
+        populateCategoryOptions(isIncome ? 'income' : 'expense');
+        updatePaymentMethodOptions(isIncome ? 'income' : 'expense');
+    }
+    document.getElementById('modalTitle').textContent = translate(
+        isSavingsGoal ? 'savingsGoal' : isIncome ? 'incomeTitle' : 'expenseTitle'
+    );
+    document.querySelector('#transactionForm button[type="submit"]').textContent =
+        translate(isSavingsGoal ? 'saveGoal' : 'saveTransaction');
 }
 
 function handleTransactionSubmit(e) {
     e.preventDefault();
     const type = document.getElementById('txType').value;
+    if (type === 'savingsGoal') {
+        saveSavingsGoal(
+            document.getElementById('savingsGoalName').value.trim(),
+            Number(document.getElementById('savingsGoalAmount').value.replace(/[^\d]/g, ''))
+        );
+        return;
+    }
+
     const amount = parseTransactionAmount(document.getElementById('txAmount').value);
     const title = document.getElementById('txTitle').value.trim();
     const category = document.getElementById('txCategory').value;
+    const paymentMethod = document.getElementById('txPaymentMethod').value;
 
-    saveTransaction(type, amount, title, category);
+    saveTransaction(type, amount, title, category, paymentMethod);
 }
 
 function alertForGamblingTransaction(title) {
@@ -899,7 +1029,7 @@ function alertForGamblingTransaction(title) {
     window.speechSynthesis.speak(utterance);
 }
 
-function saveTransaction(type, amount, title, category) {
+function saveTransaction(type, amount, title, category, paymentMethod) {
     if (!Number.isFinite(amount) || amount <= 0) {
         alert("Masukkan jumlah nominal yang valid.");
         return;
@@ -908,12 +1038,20 @@ function saveTransaction(type, amount, title, category) {
         alert("Transaksi tidak dapat disimpan.");
         return;
     }
+    const validPaymentMethods = type === 'income'
+        ? ['BANK', 'E-WALLET', 'Cash']
+        : ['Cash', 'Transfer / Tf', 'Other'];
+    if (!validPaymentMethods.includes(paymentMethod)) {
+        alert("Pilih metode pembayaran yang valid.");
+        return;
+    }
 
     const newTx = {
         id: Date.now(),
         type: type,
         title: title,
         category: category,
+        paymentMethod: paymentMethod,
         amount: amount,
         date: new Date().toISOString()
     };
@@ -936,6 +1074,24 @@ function saveTransaction(type, amount, title, category) {
     displayedCalendarMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
     renderMiniCalendar();
     alertForGamblingTransaction(title);
+}
+
+function saveSavingsGoal(name, amount) {
+    if (!currentUser || !name || !Number.isFinite(amount) || amount <= 0) {
+        alert(currentLanguage === 'id'
+            ? 'Masukkan nama dan nominal target yang valid.'
+            : 'Enter a valid goal name and amount.');
+        return;
+    }
+
+    currentUser.savingsGoal = {
+        name,
+        amount,
+        updatedAt: new Date().toISOString()
+    };
+    saveUserData();
+    closeTransactionModal();
+    updateWalletGoalCard();
 }
 
 function saveUserData() {
@@ -968,7 +1124,10 @@ function deleteTransaction(transactionIndex) {
         return;
     }
 
-    if (!confirm(`Hapus transaksi "${transaction.title}" sebesar ${formatMoney(amount)}? Saldo akan disesuaikan.`)) {
+    const confirmation = translate('confirmDeleteTransaction')
+        .replace('{title}', transaction.title)
+        .replace('{amount}', formatMoney(amount));
+    if (!confirm(confirmation)) {
         return;
     }
 
@@ -982,6 +1141,7 @@ function deleteTransaction(transactionIndex) {
 // UPDATE DASHBOARD & RENDER UI
 function updateDashboardUI() {
     updateBalanceDisplay();
+    updateWalletGoalCard();
     
     const txs = currentUser.transactions || [];
     
@@ -1034,6 +1194,70 @@ function updateDashboardUI() {
     renderFullHistory();
 }
 
+function updateWalletGoalCard() {
+    if (!currentUser) return;
+    const goal = currentUser.savingsGoal;
+    const primaryLabel = document.getElementById('walletCardPrimaryLabel');
+    const primaryValue = document.getElementById('walletCardPrimaryValue');
+    const secondaryLabel = document.getElementById('walletCardSecondaryLabel');
+    const secondaryValue = document.getElementById('walletCardSecondaryValue');
+
+    if (!goal || typeof goal.name !== 'string' || !Number.isFinite(Number(goal.amount)) || Number(goal.amount) <= 0) {
+        primaryLabel.textContent = translate('cardNumber');
+        primaryValue.textContent = '**** **** **** 8766';
+        secondaryLabel.textContent = translate('validThru');
+        secondaryValue.textContent = '08/28';
+        return;
+    }
+
+    const targetAmount = Number(goal.amount);
+    const balance = Number(currentUser.balance);
+    const progress = Number.isFinite(balance) ? Math.max(0, balance) : 0;
+    const progressPercent = Math.min(100, Math.floor((progress / targetAmount) * 100));
+    primaryLabel.textContent = translate('savingsGoalName');
+    primaryValue.textContent = goal.name;
+    primaryValue.title = goal.name;
+    secondaryLabel.textContent = translate('goalProgress');
+    secondaryValue.textContent = isBalanceSensorHidden
+        ? `•••• / ${formatRupiah(targetAmount)}`
+        : `${formatRupiah(progress)} / ${formatRupiah(targetAmount)} (${progressPercent}%)`;
+}
+
+function setHistoryFilter(filter) {
+    if (!['month', 'all', 'income', 'expense'].includes(filter)) {
+        return;
+    }
+
+    activeHistoryFilter = filter;
+    if (filter !== 'month') {
+        historyTypeFilter = filter;
+    }
+    const filters = {
+        month: document.getElementById('historyFilterMonth'),
+        all: document.getElementById('historyFilterAll'),
+        income: document.getElementById('historyFilterIncome'),
+        expense: document.getElementById('historyFilterExpense')
+    };
+
+    Object.entries(filters).forEach(([key, button]) => {
+        const isActive = key === activeHistoryFilter;
+        button.setAttribute('aria-pressed', String(isActive));
+        button.classList.toggle('bg-indigo-600', isActive);
+        button.classList.toggle('text-white', isActive);
+        button.classList.toggle('shadow-sm', isActive);
+        button.classList.toggle('bg-gray-100', !isActive);
+        button.classList.toggle('text-gray-600', !isActive);
+        button.classList.toggle('hover:bg-gray-200', !isActive);
+        button.classList.toggle('hover:bg-indigo-700', isActive);
+        button.classList.toggle('font-semibold', isActive);
+        button.classList.toggle('font-medium', !isActive);
+    });
+
+    if (filter !== 'month') {
+        renderFullHistory();
+    }
+}
+
 function renderFullHistory() {
     const container = document.getElementById('fullHistoryContainer');
     container.innerHTML = '';
@@ -1044,13 +1268,22 @@ function renderFullHistory() {
         return;
     }
 
-    txs.forEach((t, index) => {
+    const visibleTransactions = txs
+        .map((transaction, index) => ({ transaction, index }))
+        .filter(({ transaction }) => historyTypeFilter === 'all' || transaction.type === historyTypeFilter);
+
+    if (visibleTransactions.length === 0) {
+        container.innerHTML = `<p class="text-xs text-gray-400 text-center py-8">${translate('noFilteredTransactions')}</p>`;
+        return;
+    }
+
+    visibleTransactions.forEach(({ transaction: t, index }) => {
         const isInc = t.type === 'income';
         const sign = isInc ? '+' : '-';
         const colorClass = isInc ? 'text-emerald-600' : 'text-gray-900';
         
         const div = document.createElement('div');
-        div.className = "flex items-center justify-between p-3.5 bg-white border border-gray-100 rounded-xl shadow-xs";
+        div.className = "history-transaction flex items-center justify-between p-3.5 bg-white border border-gray-100 rounded-xl shadow-xs";
         div.innerHTML = `
             <div class="flex items-center space-x-3 min-w-0 flex-1">
                 <div class="w-10 h-10 rounded-xl bg-gray-50 text-gray-600 flex items-center justify-center text-sm font-semibold">
@@ -1068,6 +1301,43 @@ function renderFullHistory() {
                 </button>
             </div>
         `;
+        let holdTimeout;
+        let startX = 0;
+        let startY = 0;
+        let longPressTriggered = false;
+        let gestureEligible = false;
+
+        div.addEventListener('pointerdown', event => {
+            gestureEligible = event.button === 0 && !event.target.closest('button');
+            if (!gestureEligible) return;
+            startX = event.clientX;
+            startY = event.clientY;
+            longPressTriggered = false;
+            holdTimeout = window.setTimeout(() => {
+                longPressTriggered = true;
+                deleteTransaction(index);
+            }, 650);
+        });
+        div.addEventListener('pointermove', event => {
+            if (Math.abs(event.clientX - startX) > 10 || Math.abs(event.clientY - startY) > 10) {
+                window.clearTimeout(holdTimeout);
+            }
+        });
+        const finishGesture = event => {
+            window.clearTimeout(holdTimeout);
+            if (!gestureEligible) return;
+            gestureEligible = false;
+            const deltaX = event.clientX - startX;
+            const deltaY = event.clientY - startY;
+            if (!longPressTriggered && Math.abs(deltaX) >= 80 && Math.abs(deltaX) > Math.abs(deltaY)) {
+                deleteTransaction(index);
+            }
+        };
+        div.addEventListener('pointerup', finishGesture);
+        div.addEventListener('pointercancel', () => {
+            window.clearTimeout(holdTimeout);
+            gestureEligible = false;
+        });
         container.appendChild(div);
     });
 }
@@ -1157,23 +1427,16 @@ function renderMiniCalendar() {
 
         const dateKey = `${year}-${month}-${day}`;
         const dayTransactions = transactionsByDate.get(dateKey) || [];
-        const expenses = dayTransactions.filter(transaction => transaction.type === 'expense');
-        const dominantExpense = expenses.reduce((largest, transaction) => {
-            const amount = Number(transaction.amount);
-            return Number.isFinite(amount) && (!largest || amount > Number(largest.amount))
-                ? transaction
-                : largest;
-        }, null);
+        const hasMarkedPayment = dayTransactions.some(transaction => {
+            const paymentMethod = String(transaction.paymentMethod || '').trim().toLowerCase();
+            return paymentMethod === 'cash' ||
+                paymentMethod === 'transfer' ||
+                paymentMethod === 'tf' ||
+                paymentMethod === 'transfer / tf';
+        });
 
-        if (dominantExpense) {
-            const category = appConfig.categories.find(item => item.value === dominantExpense.category);
-            if (category && category.calendarTheme) {
-                span.classList.add(`calendar-day-${category.calendarTheme}`);
-            }
-        } else if (dayTransactions.some(transaction =>
-            transaction.type === 'income' || String(transaction.category).toLowerCase() === 'savings'
-        )) {
-            span.classList.add('calendar-day-income');
+        if (hasMarkedPayment) {
+            span.classList.add('calendar-day-payment');
         }
 
         if (today.getFullYear() === year && today.getMonth() === month && today.getDate() === day) {
