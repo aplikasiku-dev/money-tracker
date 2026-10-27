@@ -382,6 +382,7 @@ function escapeHtml(value) {
 
 function applyTheme() {
     document.documentElement.classList.toggle('dark-mode', currentTheme === 'dark');
+    document.documentElement.classList.toggle('light-mode', currentTheme === 'light');
     const toggle = document.getElementById('themeToggle');
     if (toggle) toggle.setAttribute('aria-pressed', String(currentTheme === 'dark'));
 }
@@ -1038,11 +1039,11 @@ function setModalType(type) {
     amountField.querySelectorAll('input, select, button').forEach(control => {
         control.disabled = isSavingsGoal;
     });
-    titleField.classList.remove('hidden');
+    titleField.classList.toggle('hidden', isIncome);
     titleField.querySelector('label').textContent = translate(isReceivable ? 'borrowerName' : 'transactionName');
     titleField.querySelector('input').placeholder = translate(isReceivable ? 'borrowerPlaceholder' : 'transactionPlaceholder');
-    titleField.querySelector('input').disabled = isSavingsGoal;
-    titleField.querySelector('input').required = !isSavingsGoal;
+    titleField.querySelector('input').disabled = isIncome;
+    titleField.querySelector('input').required = !isIncome && !isSavingsGoal;
     categoryField.classList.toggle('hidden', isSavingsGoal || isReceivable);
     categoryField.querySelector('select').disabled = isSavingsGoal || isReceivable;
     paymentField.classList.toggle('hidden', isSavingsGoal);
@@ -1101,7 +1102,7 @@ function saveTransaction(type, amount, title, category, paymentMethod) {
         alert("Masukkan jumlah nominal yang valid.");
         return;
     }
-    if (!currentUser || !['income', 'expense', 'receivable'].includes(type) || !title) {
+    if (!currentUser || !['income', 'expense', 'receivable'].includes(type) || (!title && type !== 'income')) {
         alert("Transaksi tidak dapat disimpan.");
         return;
     }
@@ -1114,10 +1115,13 @@ function saveTransaction(type, amount, title, category, paymentMethod) {
     }
 
     const amountInUsd = currentCurrency === 'IDR' ? amount / USD_TO_IDR : amount;
+    const transactionTitle = title || (type === 'income'
+        ? `${translate('income')} - ${paymentMethod}`
+        : '');
     const newTx = {
         id: Date.now(),
         type: type,
-        title: title,
+        title: transactionTitle,
         category: category,
         paymentMethod: paymentMethod,
         amount: amountInUsd,
@@ -1584,11 +1588,9 @@ function renderMiniCalendar() {
         const dateKey = `${year}-${month}-${day}`;
         const dayTransactions = transactionsByDate.get(dateKey) || [];
         const hasMarkedPayment = dayTransactions.some(transaction => {
+            if (transaction.type !== 'income') return false;
             const paymentMethod = String(transaction.paymentMethod || '').trim().toLowerCase();
-            return paymentMethod === 'cash' ||
-                paymentMethod === 'transfer' ||
-                paymentMethod === 'tf' ||
-                paymentMethod === 'transfer / tf';
+            return ['cash', 'ewalet', 'bank'].includes(paymentMethod);
         });
 
         if (hasMarkedPayment) {
