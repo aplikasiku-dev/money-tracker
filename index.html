@@ -281,8 +281,8 @@
                         </button>
                     </div>
                 </div>
-                <div class="account-menu-list">
-                    <button type="button" onclick="toggleAccountPanel('profilePanel')" aria-expanded="false" aria-controls="profilePanel" class="account-menu-item">
+                <div id="menu-utama-akun" class="account-menu-list" style="display: block;">
+                    <button type="button" onclick="openAccountSubpage('profilePanel')" aria-controls="profilePanel" class="account-menu-item">
                         <span class="account-menu-icon"><i class="fa-solid fa-user"></i></span>
                         <span class="flex-1 text-left">
                             <span class="block text-sm font-semibold text-gray-800" data-i18n="profile">Profile</span>
@@ -290,7 +290,15 @@
                         </span>
                         <i class="fa-solid fa-chevron-right text-xs text-gray-400"></i>
                     </button>
-                    <button type="button" onclick="toggleAccountPanel('passwordPanel')" aria-expanded="false" aria-controls="passwordPanel" class="account-menu-item">
+                    <button type="button" onclick="openAccountSubpage('tileGamePanel')" class="account-menu-item">
+                        <span class="account-menu-icon"><i class="fa-solid fa-shapes"></i></span>
+                        <span class="flex-1 text-left">
+                            <span class="block text-sm font-semibold text-gray-800">Tantangan Ubin Harian</span>
+                            <span class="block text-xs text-gray-500 mt-0.5">Cocokkan ubin gratis untuk hiburan santai</span>
+                        </span>
+                        <i class="fa-solid fa-chevron-right text-xs text-gray-400"></i>
+                    </button>
+                    <button type="button" onclick="openAccountSubpage('passwordPanel')" aria-controls="passwordPanel" class="account-menu-item">
                         <span class="account-menu-icon"><i class="fa-solid fa-lock"></i></span>
                         <span class="flex-1 text-left">
                             <span class="block text-sm font-semibold text-gray-800" data-i18n="changePassword">Change Password</span>
@@ -299,7 +307,8 @@
                         <i class="fa-solid fa-chevron-right text-xs text-gray-400"></i>
                     </button>
                 </div>
-                <section id="profilePanel" class="account-inline-panel hidden" aria-labelledby="profilePanelTitle">
+                <section id="profilePanel" class="account-inline-panel hidden" style="display: none;" aria-labelledby="profilePanelTitle">
+                    <button type="button" onclick="returnToAccountMenu()" class="account-back-button"><i class="fa-solid fa-arrow-left"></i><span data-i18n="back">Kembali</span></button>
                     <h3 id="profilePanelTitle" class="text-base font-bold text-gray-900 mb-3" data-i18n="profile">Profile</h3>
                     <p class="profile-detail-row mb-3"><span data-i18n="userId">Student ID / User ID</span><strong id="profileIdValue"></strong></p>
                     <form id="editProfileForm" class="space-y-3">
@@ -312,7 +321,55 @@
                         <button type="submit" class="account-submit-button" data-i18n="saveChanges">Save Changes</button>
                     </form>
                 </section>
-                <section id="passwordPanel" class="account-inline-panel hidden" aria-labelledby="passwordPanelTitle">
+                <section id="tileGamePanel" class="account-inline-panel hidden" style="display: none;" aria-labelledby="tileGameTitle">
+                    <button type="button" onclick="returnToAccountMenu()" class="account-back-button"><i class="fa-solid fa-arrow-left"></i><span data-i18n="back">Kembali</span></button>
+                    <h3 id="tileGameTitle" class="text-base font-bold text-gray-900 mb-2">Tantangan Ubin Harian</h3>
+                    <p class="tile-game-disclaimer">Tantangan ubin orisinal untuk hiburan. Putaran gratis dan skor hanya demo; tidak ada taruhan, uang, atau hadiah.</p>
+                    <div class="tile-game-shell">
+                        <div class="tile-game-multipliers" id="tileGameMultipliers" aria-label="Pengali skor">
+                            <span class="tile-game-multiplier is-active" data-multiplier="1">x1</span>
+                            <span class="tile-game-multiplier" data-multiplier="2">x2</span>
+                            <span class="tile-game-multiplier" data-multiplier="3">x3</span>
+                            <span class="tile-game-multiplier" data-multiplier="5">x5</span>
+                        </div>
+                        <div id="tileGameBoard" class="tile-game-board" role="group" aria-label="Papan tantangan ubin" aria-live="polite">
+                            <div class="tile-game-cell" aria-label="Naga Hijau">發</div>
+                            <div class="tile-game-cell" aria-label="Naga Merah">中</div>
+                            <div class="tile-game-cell" aria-label="Naga Putih">白</div>
+                            <div class="tile-game-cell" aria-label="Kucing Emas">貓</div>
+                            <div class="tile-game-cell" aria-label="Batangan Emas">金</div>
+                            <div class="tile-game-cell" aria-label="Ubin Delapan">八</div>
+                            <div class="tile-game-cell" aria-label="Naga Hijau">發</div>
+                            <div class="tile-game-cell" aria-label="Naga Merah">中</div>
+                            <div class="tile-game-cell" aria-label="Naga Putih">白</div>
+                            <div class="tile-game-cell" aria-label="Kucing Emas">貓</div>
+                            <div class="tile-game-cell" aria-label="Batangan Emas">金</div>
+                            <div class="tile-game-cell" aria-label="Ubin Delapan">八</div>
+                            <div class="tile-game-cell" aria-label="Naga Hijau">發</div>
+                            <div class="tile-game-cell" aria-label="Naga Merah">中</div>
+                            <div class="tile-game-cell" aria-label="Naga Putih">白</div>
+                            <div class="tile-game-cell" aria-label="Kucing Emas">貓</div>
+                            <div class="tile-game-cell" aria-label="Batangan Emas">金</div>
+                            <div class="tile-game-cell" aria-label="Ubin Delapan">八</div>
+                            <div class="tile-game-cell" aria-label="Naga Hijau">發</div>
+                            <div class="tile-game-cell" aria-label="Naga Merah">中</div>
+                        </div>
+                        <div class="tile-game-metrics" aria-live="polite">
+                            <div><span>POIN DEMO</span><strong id="tileGameDemoBalance">1.000</strong></div>
+                            <div><span>BIAYA PUTAR</span><strong id="tileGameDemoBet">0</strong></div>
+                            <div class="tile-game-score"><span>SKOR HIBURAN</span><strong id="tileGameWin">0</strong></div>
+                        </div>
+                        <div class="tile-game-spin-area">
+                            <button id="tileGameSpinButton" type="button" onclick="spinTileGame()" class="tile-game-spin-button" aria-label="Putar ubin gratis">
+                                <i class="fa-solid fa-rotate" aria-hidden="true"></i>
+                                <span id="tileGameSpinLabel">PUTAR GRATIS</span>
+                            </button>
+                        </div>
+                    </div>
+                    <p id="tileGameMessage" class="min-h-10 mt-3 text-center text-sm font-semibold text-gray-700" role="status" aria-live="polite">Tekan tombol untuk memulai tantangan gratis.</p>
+                </section>
+                <section id="passwordPanel" class="account-inline-panel hidden" style="display: none;" aria-labelledby="passwordPanelTitle">
+                    <button type="button" onclick="returnToAccountMenu()" class="account-back-button"><i class="fa-solid fa-arrow-left"></i><span data-i18n="back">Kembali</span></button>
                     <h3 id="passwordPanelTitle" class="text-base font-bold text-gray-900 mb-3" data-i18n="changePassword">Change Password</h3>
                     <form id="passwordForm" class="space-y-3">
                         <label class="account-form-label"><span data-i18n="currentPassword">Current Password</span>

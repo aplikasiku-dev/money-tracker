@@ -217,9 +217,11 @@ textarea:focus {
 }
 
 .account-menu-list {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+    display: block;
+}
+
+.account-menu-item + .account-menu-item {
+    margin-top: 10px;
 }
 
 .account-menu-item {
@@ -260,6 +262,176 @@ textarea:focus {
     border-radius: 18px;
     background: #fff;
     box-shadow: 0 2px 8px rgba(17, 24, 39, 0.05);
+}
+
+.account-back-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 16px;
+    padding: 8px 11px;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    background: #fff;
+    color: #4b5563;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.account-back-button:hover {
+    background: #f3f4f6;
+}
+
+.tile-game-disclaimer {
+    margin-bottom: 12px;
+    color: #6b7280;
+    font-size: 11px;
+    line-height: 1.5;
+}
+
+.tile-game-shell {
+    padding: 14px;
+    border: 1px solid #cbd5e1;
+    border-radius: 20px;
+    background: linear-gradient(150deg, #f8fafc, #e0f2fe);
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+}
+
+.tile-game-multipliers {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+    margin-bottom: 12px;
+}
+
+.tile-game-multiplier {
+    padding: 7px 4px;
+    border: 1px solid #cbd5e1;
+    border-radius: 9px;
+    background: #fff;
+    color: #475569;
+    font-size: 12px;
+    font-weight: 800;
+    text-align: center;
+}
+
+.tile-game-multiplier.is-active {
+    border-color: #0e7490;
+    background: #cffafe;
+    color: #155e75;
+}
+
+.tile-game-board {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 6px;
+    padding: 9px;
+    border: 1px solid #94a3b8;
+    border-radius: 15px;
+    background: linear-gradient(145deg, #e2e8f0, #cbd5e1);
+}
+
+.tile-game-cell {
+    display: flex;
+    min-width: 0;
+    min-height: clamp(48px, 13vw, 68px);
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border: 1px solid #94a3b8;
+    border-radius: 10px;
+    background: linear-gradient(145deg, #fff, #f1f5f9);
+    color: #0f766e;
+    font-size: clamp(18px, 6vw, 28px);
+    font-weight: 800;
+    box-shadow: 0 3px 6px rgba(15, 23, 42, 0.12);
+}
+
+.tile-game-cell[aria-label="SCATTER"] {
+    border-color: #c2410c;
+    background: linear-gradient(145deg, #ffedd5, #fed7aa);
+    color: #9a3412;
+    font-size: clamp(9px, 2.8vw, 13px);
+    letter-spacing: 0.02em;
+}
+
+.tile-game-board.is-spinning .tile-game-cell {
+    animation: tileShuffle 0.18s ease-in-out infinite alternate;
+}
+
+@keyframes tileShuffle {
+    from {
+        transform: translateY(-2px);
+    }
+    to {
+        transform: translateY(2px);
+    }
+}
+
+.tile-game-score {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 10px;
+    padding: 10px 12px;
+    border: 1px solid #99f6e4;
+    border-radius: 12px;
+    background: #f0fdfa;
+    color: #115e59;
+}
+
+.tile-game-score span {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+}
+
+.tile-game-score strong {
+    font-size: 15px;
+    font-variant-numeric: tabular-nums;
+}
+
+.tile-game-spin-area {
+    display: flex;
+    justify-content: center;
+    padding-top: 12px;
+}
+
+.tile-game-spin-button {
+    display: flex;
+    width: 92px;
+    height: 92px;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+    border: 4px solid #a5f3fc;
+    border-radius: 50%;
+    background: linear-gradient(145deg, #0891b2, #0f766e);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 900;
+    line-height: 1.2;
+    text-align: center;
+    box-shadow: 0 5px 14px rgba(8, 145, 178, 0.3);
+    cursor: pointer;
+    transition: transform 0.15s, filter 0.15s, background-color 0.15s;
+}
+
+.tile-game-spin-button:hover:not(:disabled) {
+    filter: brightness(1.08);
+    transform: translateY(-1px);
+}
+
+.tile-game-spin-button:disabled {
+    cursor: wait;
+    opacity: 0.75;
+}
+
+.tile-game-spin-button.is-free-spin {
+    border-color: #fde68a;
+    background: linear-gradient(145deg, #d97706, #b45309);
+    box-shadow: 0 5px 14px rgba(217, 119, 6, 0.28);
 }
 
 .account-logout-button {
@@ -452,6 +624,60 @@ textarea:focus {
 .dark-mode .transaction-type-button[aria-pressed="true"] {
     background-color: #4f46e5;
     color: #fff;
+}
+
+.dark-mode .account-back-button {
+    border-color: #4b5563;
+    background: #1f2937;
+    color: #e5e7eb;
+}
+
+.dark-mode .account-back-button:hover {
+    background: #374151;
+}
+
+.dark-mode .tile-game-disclaimer {
+    color: #cbd5e1;
+}
+
+.dark-mode .tile-game-shell {
+    border-color: #334155;
+    background: linear-gradient(150deg, #0f172a, #102a36);
+}
+
+.dark-mode .tile-game-multiplier {
+    border-color: #475569;
+    background: #1e293b;
+    color: #cbd5e1;
+}
+
+.dark-mode .tile-game-multiplier.is-active {
+    border-color: #22d3ee;
+    background: #164e63;
+    color: #cffafe;
+}
+
+.dark-mode .tile-game-board {
+    border-color: #475569;
+    background: linear-gradient(145deg, #1e293b, #0f172a);
+}
+
+.dark-mode .tile-game-cell {
+    border-color: #64748b;
+    background: linear-gradient(145deg, #f8fafc, #cbd5e1);
+    color: #0f766e;
+}
+
+.dark-mode .tile-game-cell[aria-label="SCATTER"] {
+    border-color: #fb923c;
+    background: linear-gradient(145deg, #ffedd5, #fdba74);
+    color: #9a3412;
+}
+
+.dark-mode .tile-game-score {
+    border-color: #0f766e;
+    background: #134e4a;
+    color: #ccfbf1;
 }
 
 .light-mode body {
@@ -670,5 +896,202 @@ textarea:focus {
 
     .calculator-panel {
         width: min(100%, 380px);
+    }
+}
+
+.tile-game-shell {
+    border: 2px solid #d6a64a;
+    background:
+        radial-gradient(ellipse at 50% 0%, rgba(255, 215, 120, 0.18), transparent 55%),
+        linear-gradient(155deg, #6f101b, #350910 72%);
+    box-shadow: inset 0 0 0 2px rgba(255, 224, 142, 0.12), 0 10px 24px rgba(65, 8, 15, 0.22);
+}
+
+.tile-game-multiplier {
+    border-color: #9e6d24;
+    background: linear-gradient(180deg, #fff4c2, #dba842);
+    color: #60220d;
+    text-shadow: 0 1px rgba(255, 255, 255, 0.55);
+}
+
+.tile-game-multiplier.is-active {
+    border-color: #fff0a5;
+    background: linear-gradient(180deg, #fff7cf, #f8c64f);
+    color: #7f1d1d;
+    box-shadow: 0 0 10px rgba(255, 207, 72, 0.68);
+}
+
+.tile-game-board {
+    grid-template-rows: repeat(4, minmax(0, 1fr));
+    gap: 5px;
+    padding: 8px;
+    border: 3px solid #d6a64a;
+    border-radius: 12px;
+    background: linear-gradient(145deg, #4a1012, #761a1d);
+    box-shadow: inset 0 0 0 1px #fff0a5, 0 0 12px rgba(255, 198, 71, 0.25);
+}
+
+.tile-game-cell {
+    min-height: clamp(42px, 11vw, 58px);
+    border: 2px solid #c6a45e;
+    border-radius: 8px;
+    background: linear-gradient(145deg, #fffef4, #e4dcc0);
+    color: #0b7653;
+    font-family: "Noto Serif CJK SC", "Microsoft YaHei", serif;
+    font-size: clamp(19px, 6vw, 30px);
+    box-shadow: inset 0 1px 0 #fff, 0 2px 4px rgba(0, 0, 0, 0.25);
+}
+
+.tile-game-cell[aria-label="Naga Merah"] {
+    color: #bf2633;
+}
+
+.tile-game-cell[aria-label="Naga Putih"] {
+    color: #2764a1;
+}
+
+.tile-game-cell[aria-label="Kucing Emas"],
+.tile-game-cell[aria-label="Batangan Emas"],
+.tile-game-cell[aria-label="Ubin Delapan"] {
+    color: #a45b0a;
+}
+
+.tile-game-cell[aria-label="SCATTER"] {
+    border-color: #efb82d;
+    background: linear-gradient(145deg, #fff2a8, #e1a31b);
+    color: #7c1d16;
+    font-family: inherit;
+    font-size: clamp(8px, 2.5vw, 12px);
+    font-weight: 900;
+}
+
+.tile-game-board.shatter-left .tile-game-cell {
+    animation: tileShatterLeft 0.38s ease-in forwards;
+    will-change: transform, opacity;
+}
+
+.tile-game-board.shatter-left .tile-game-cell:nth-child(5n + 1) { animation-delay: 0ms; }
+.tile-game-board.shatter-left .tile-game-cell:nth-child(5n + 2) { animation-delay: 55ms; }
+.tile-game-board.shatter-left .tile-game-cell:nth-child(5n + 3) { animation-delay: 110ms; }
+.tile-game-board.shatter-left .tile-game-cell:nth-child(5n + 4) { animation-delay: 165ms; }
+.tile-game-board.shatter-left .tile-game-cell:nth-child(5n) { animation-delay: 220ms; }
+
+@keyframes tileShatterLeft {
+    to {
+        opacity: 0.15;
+        transform: translateX(8px) scale(0.82);
+    }
+}
+
+.tile-game-metrics {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    margin-top: 9px;
+}
+
+.tile-game-metrics > div {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+    padding: 8px 5px;
+    border: 1px solid #d4a449;
+    border-radius: 9px;
+    background: linear-gradient(180deg, #fff2bf, #dfb254);
+    color: #5b210e;
+    text-align: center;
+}
+
+.tile-game-metrics > div > span {
+    font-size: clamp(7px, 2vw, 9px);
+    font-weight: 900;
+    letter-spacing: 0.03em;
+}
+
+.tile-game-metrics > div > strong {
+    overflow: hidden;
+    font-size: clamp(11px, 3vw, 14px);
+    font-variant-numeric: tabular-nums;
+    text-overflow: ellipsis;
+}
+
+.tile-game-metrics .tile-game-score {
+    gap: 4px;
+    margin: 0;
+    padding: 8px 5px;
+    border-color: #f2c65d;
+    background: linear-gradient(180deg, #fff6cf, #e8ba4d);
+    color: #7c1d16;
+}
+
+.tile-game-spin-area {
+    padding-top: 10px;
+}
+
+.tile-game-spin-button {
+    width: 76px;
+    height: 76px;
+    flex-direction: column;
+    gap: 3px;
+    border: 4px solid #b8e4a0;
+    background: radial-gradient(circle at 35% 25%, #98e57c, #299343 62%, #126333);
+    color: #fff;
+    font-size: 8px;
+    box-shadow: inset 0 2px 5px rgba(255, 255, 255, 0.45), 0 5px 12px rgba(13, 69, 34, 0.5);
+}
+
+.tile-game-spin-button i {
+    font-size: 23px;
+}
+
+.tile-game-spin-button.is-free-spin {
+    border-color: #f5df9b;
+    background: radial-gradient(circle at 35% 25%, #8bd878, #238541 65%, #0c592a);
+}
+
+.dark-mode .tile-game-shell {
+    border-color: #d6a64a;
+    background:
+        radial-gradient(ellipse at 50% 0%, rgba(255, 215, 120, 0.14), transparent 55%),
+        linear-gradient(155deg, #6f101b, #350910 72%);
+}
+
+.dark-mode .tile-game-multiplier,
+.dark-mode .tile-game-multiplier.is-active {
+    border-color: #9e6d24;
+    background: linear-gradient(180deg, #fff4c2, #dba842);
+    color: #60220d;
+}
+
+.dark-mode .tile-game-cell {
+    border-color: #c6a45e;
+    background: linear-gradient(145deg, #fffef4, #e4dcc0);
+    color: #0b7653;
+}
+
+.dark-mode .tile-game-cell[aria-label="SCATTER"] {
+    border-color: #efb82d;
+    background: linear-gradient(145deg, #fff2a8, #e1a31b);
+    color: #7c1d16;
+}
+
+.dark-mode .tile-game-metrics > div,
+.dark-mode .tile-game-metrics .tile-game-score {
+    border-color: #d4a449;
+    background: linear-gradient(180deg, #fff2bf, #dfb254);
+    color: #5b210e;
+}
+
+@media (max-width: 360px) {
+    .tile-game-board {
+        gap: 3px;
+        padding: 5px;
+    }
+
+    .tile-game-cell {
+        min-height: 40px;
+        border-width: 1px;
     }
 }

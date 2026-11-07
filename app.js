@@ -39,6 +39,17 @@ let appConfig = null;
 let historyTypeFilter = 'all';
 let activeHistoryFilter = 'all';
 let historySearchQuery = '';
+let tileGameInterval = null;
+let tileGameTimeout = null;
+let tileGameAutoSpinTimeout = null;
+let tileGameShatterTimeout = null;
+let freeSpinsSisa = 0;
+let isFreeSpinMode = false;
+let tileGamePoints = 0;
+let freeSpinSessionPoints = 0;
+let tileGameAudioContext = null;
+let tileGameBgmInterval = null;
+const tileGameBgmOscillators = new Set();
 
 const translations = {
     en: {
@@ -47,7 +58,7 @@ const translations = {
         recentTransactions: 'Recent Transactions', seeAll: 'See All', expensesList: 'Expenses List', thisMonth: 'This Month',
         allCategories: 'All Categories', financialReport: 'Financial Report',
         totalSalary: 'Total Salary', totalExpense: 'Total Expense', expenseBreakdown: 'Expense Breakdown',
-        account: 'Account', accountSubtitle: 'Manage your profile and security settings.', profile: 'Profile',
+        account: 'Account', accountSubtitle: 'Manage your profile and security settings.', profile: 'Profile', back: 'Back',
         profileSubtitle: 'View and edit your personal details', changePassword: 'Change Password',
         passwordSubtitle: 'Update your account password', fullName: 'Full Name', userId: 'Student ID / User ID',
         faculty: 'Faculty / Category', birthPlace: 'Place of Birth', birthDateAge: 'Date of Birth / Age',
@@ -92,7 +103,7 @@ const translations = {
         expensesList: 'Daftar Transaksi', thisMonth: 'Bulan Ini', allCategories: 'Semua Kategori',
         financialReport: 'Laporan Keuangan', totalSalary: 'Total Pemasukan',
         totalExpense: 'Total Pengeluaran', expenseBreakdown: 'Rincian Pengeluaran',
-        account: 'Akun', accountSubtitle: 'Kelola profil dan pengaturan keamanan Anda.', profile: 'Profil',
+        account: 'Akun', accountSubtitle: 'Kelola profil dan pengaturan keamanan Anda.', profile: 'Profil', back: 'Kembali',
         profileSubtitle: 'Lihat dan ubah detail pribadi Anda', changePassword: 'Ganti Kata Sandi',
         passwordSubtitle: 'Perbarui kata sandi akun Anda', fullName: 'Nama Lengkap', userId: 'ID Mahasiswa / ID Pengguna',
         faculty: 'Fakultas / Kategori', birthPlace: 'Tempat Lahir', birthDateAge: 'Tanggal Lahir / Umur',
@@ -370,24 +381,301 @@ function ensureUserProfile() {
     if (needsSave) saveUserData();
 }
 
-function toggleAccountPanel(panelId) {
-    const panel = document.getElementById(panelId);
-    const willOpen = panel.classList.contains('hidden');
-    document.querySelectorAll('.account-inline-panel').forEach(item => item.classList.add('hidden'));
-    document.querySelectorAll('.account-menu-item[aria-controls]').forEach(button => {
-        button.setAttribute('aria-expanded', String(button.getAttribute('aria-controls') === panelId && willOpen));
-    });
-    if (willOpen) {
-        panel.classList.remove('hidden');
-        if (panelId === 'profilePanel') {
-            document.getElementById('profileIdValue').textContent = currentUser.userId;
-            document.getElementById('editProfileName').value = currentUser.name || '';
-            document.getElementById('editProfileAge').value = currentUser.age || '';
-        } else {
-            document.getElementById('passwordForm').reset();
-            document.getElementById('passwordFormMessage').classList.add('hidden');
-        }
+function stopTileGameSpin() {
+    if (tileGameInterval !== null) {
+        window.clearInterval(tileGameInterval);
+        tileGameInterval = null;
     }
+    if (tileGameTimeout !== null) {
+        window.clearTimeout(tileGameTimeout);
+        tileGameTimeout = null;
+    }
+    if (tileGameAutoSpinTimeout !== null) {
+        window.clearTimeout(tileGameAutoSpinTimeout);
+        tileGameAutoSpinTimeout = null;
+    }
+    if (tileGameShatterTimeout !== null) {
+        window.clearTimeout(tileGameShatterTimeout);
+        tileGameShatterTimeout = null;
+    }
+    const spinButton = document.getElementById('tileGameSpinButton');
+    if (spinButton) {
+        spinButton.disabled = false;
+        updateTileGameSpinButton();
+    }
+    const board = document.getElementById('tileGameBoard');
+    if (board) board.classList.remove('is-spinning', 'shatter-left');
+}
+
+function openAccountSubpage(panelId) {
+    const allowedPanels = ['profilePanel', 'tileGamePanel', 'passwordPanel'];
+    if (!allowedPanels.includes(panelId)) return;
+    stopTileGameSpin();
+    document.getElementById('menu-utama-akun').style.display = 'none';
+    document.querySelectorAll('.account-inline-panel').forEach(panel => {
+        panel.style.display = panel.id === panelId ? 'block' : 'none';
+    });
+    stopTileGameBgm();
+
+    if (panelId === 'profilePanel') {
+        document.getElementById('profileIdValue').textContent = currentUser.userId;
+        document.getElementById('editProfileName').value = currentUser.name || '';
+        document.getElementById('editProfileAge').value = currentUser.age || '';
+    } else if (panelId === 'passwordPanel') {
+        document.getElementById('passwordForm').reset();
+        document.getElementById('passwordFormMessage').classList.add('hidden');
+    } else if (panelId === 'tileGamePanel') {
+        startTileGameBgm();
+    }
+}
+
+function returnToAccountMenu() {
+    stopTileGameSpin();
+    stopTileGameBgm();
+    document.querySelectorAll('.account-inline-panel').forEach(panel => {
+        panel.style.display = 'none';
+    });
+    document.getElementById('menu-utama-akun').style.display = 'block';
+}
+
+function getTileGameAudioContext() {
+    if (!tileGameAudioContext) {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (AudioContextClass) tileGameAudioContext = new AudioContextClass();
+    }
+    if (tileGameAudioContext && tileGameAudioContext.state === 'suspended') {
+        tileGameAudioContext.resume();
+    }
+    return tileGameAudioContext;
+}
+
+function startTileGameBgm() {
+    const audioContext = getTileGameAudioContext();
+    if (!audioContext || tileGameBgmInterval !== null) return;
+
+    const notes = [261.63, 329.63, 392, 329.63, 293.66, 349.23, 440, 349.23];
+    let noteIndex = 0;
+    const playNote = () => {
+        if (audioContext.state !== 'running') return;
+        const startTime = audioContext.currentTime;
+        const oscillator = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(notes[noteIndex], startTime);
+        gain.gain.setValueAtTime(0.001, startTime);
+        gain.gain.linearRampToValueAtTime(0.012, startTime + 0.06);
+        gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.5);
+        oscillator.connect(gain);
+        gain.connect(audioContext.destination);
+        tileGameBgmOscillators.add(oscillator);
+        oscillator.addEventListener('ended', () => tileGameBgmOscillators.delete(oscillator), { once: true });
+        oscillator.start(startTime);
+        oscillator.stop(startTime + 0.52);
+        noteIndex = (noteIndex + 1) % notes.length;
+    };
+
+    playNote();
+    tileGameBgmInterval = window.setInterval(playNote, 560);
+}
+
+function stopTileGameBgm() {
+    if (tileGameBgmInterval !== null) {
+        window.clearInterval(tileGameBgmInterval);
+        tileGameBgmInterval = null;
+    }
+    tileGameBgmOscillators.forEach(oscillator => {
+        try {
+            oscillator.stop();
+        } catch (error) {
+            if (error.name !== 'InvalidStateError') throw error;
+        }
+    });
+    tileGameBgmOscillators.clear();
+}
+
+function playTileShuffleSound(audioContext) {
+    const oscillator = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+    oscillator.type = 'triangle';
+    oscillator.frequency.setValueAtTime(740, audioContext.currentTime);
+    oscillator.frequency.exponentialRampToValueAtTime(180, audioContext.currentTime + 0.18);
+    gain.gain.setValueAtTime(0.045, audioContext.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.18);
+    oscillator.connect(gain);
+    gain.connect(audioContext.destination);
+    oscillator.start();
+    oscillator.stop(audioContext.currentTime + 0.18);
+}
+
+function playTileChime(audioContext) {
+    [659.25, 830.61, 987.77].forEach((frequency, index) => {
+        const startTime = audioContext.currentTime + index * 0.1;
+        const oscillator = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(frequency, startTime);
+        gain.gain.setValueAtTime(0.001, startTime);
+        gain.gain.linearRampToValueAtTime(0.07, startTime + 0.025);
+        gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.32);
+        oscillator.connect(gain);
+        gain.connect(audioContext.destination);
+        oscillator.start(startTime);
+        oscillator.stop(startTime + 0.32);
+    });
+}
+
+function playTileBonusSound(audioContext) {
+    [523.25, 659.25, 783.99, 1046.5].forEach((frequency, index) => {
+        const startTime = audioContext.currentTime + index * 0.13;
+        const oscillator = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(frequency, startTime);
+        gain.gain.setValueAtTime(0.001, startTime);
+        gain.gain.linearRampToValueAtTime(0.065, startTime + 0.03);
+        gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.3);
+        oscillator.connect(gain);
+        gain.connect(audioContext.destination);
+        oscillator.start(startTime);
+        oscillator.stop(startTime + 0.3);
+    });
+}
+
+function spinTileGame() {
+    if (tileGameInterval !== null) return;
+
+    const tiles = [
+        { name: 'Naga Hijau', glyph: '🐉' },
+        { name: 'Naga Merah', glyph: '中' },
+        { name: 'Naga Putih', glyph: '白' },
+        { name: 'Kucing Emas', glyph: '貓' },
+        { name: 'Batangan Emas', glyph: '金' },
+        { name: 'Ubin 8 Balok', glyph: '八' },
+        { name: 'SCATTER', glyph: '散' }
+    ];
+    const cells = [...document.querySelectorAll('#tileGameBoard .tile-game-cell')];
+    const board = document.getElementById('tileGameBoard');
+    const message = document.getElementById('tileGameMessage');
+    const spinButton = document.getElementById('tileGameSpinButton');
+    const isBonusSpin = isFreeSpinMode && freeSpinsSisa > 0;
+    const bonusSpinIndex = 12 - freeSpinsSisa;
+    const bonusMultipliers = [2, 4, 6, 10];
+    const multiplier = isBonusSpin
+        ? bonusMultipliers[Math.min(3, Math.floor(bonusSpinIndex / 3))]
+        : 1;
+    const audioContext = getTileGameAudioContext();
+
+    spinButton.disabled = true;
+    board.classList.add('is-spinning');
+    message.textContent = isBonusSpin
+        ? `Putaran bonus sedang diacak (${freeSpinsSisa} tersisa)...`
+        : 'Ubin sedang diacak...';
+    if (audioContext) playTileShuffleSound(audioContext);
+    updateTileGameMultipliers(isBonusSpin ? multiplier : 1);
+
+    const drawTiles = () => cells.map(cell => {
+        const tile = Math.random() < 0.004
+            ? tiles[tiles.length - 1]
+            : tiles[Math.floor(Math.random() * (tiles.length - 1))];
+        cell.textContent = tile.glyph;
+        cell.setAttribute('aria-label', tile.name);
+        cell.title = tile.name;
+        return tile;
+    });
+
+    drawTiles();
+    tileGameInterval = window.setInterval(drawTiles, 75);
+    tileGameTimeout = window.setTimeout(() => {
+        window.clearInterval(tileGameInterval);
+        tileGameInterval = null;
+        tileGameTimeout = null;
+        board.classList.remove('is-spinning');
+        const result = drawTiles();
+        const symbolCounts = result.reduce((counts, tile) => {
+            if (tile.name !== 'SCATTER') counts[tile.name] = (counts[tile.name] || 0) + 1;
+            return counts;
+        }, {});
+        const matchingTiles = Math.max(0, ...Object.values(symbolCounts).filter(count => count >= 3));
+        const roundPoints = matchingTiles * 10 * multiplier;
+        const hasScatter = result.some(tile => tile.name === 'SCATTER');
+        tileGamePoints += roundPoints;
+        document.getElementById('tileGameWin').textContent = tileGamePoints.toLocaleString('id-ID');
+        if (matchingTiles >= 3) {
+            board.classList.add('shatter-left');
+            tileGameShatterTimeout = window.setTimeout(() => {
+                board.classList.remove('shatter-left');
+                tileGameShatterTimeout = null;
+            }, 620);
+        }
+
+        if (isBonusSpin) {
+            freeSpinsSisa -= 1;
+            freeSpinSessionPoints += roundPoints;
+            isFreeSpinMode = freeSpinsSisa > 0;
+        } else if (hasScatter) {
+            freeSpinsSisa = 12;
+            isFreeSpinMode = true;
+            freeSpinSessionPoints = 0;
+        }
+
+        if (isBonusSpin && freeSpinsSisa === 0) {
+            message.textContent = `Sesi gratis selesai! Total skor hiburan: ${freeSpinSessionPoints.toLocaleString('id-ID')} poin.`;
+        } else if (!isBonusSpin && hasScatter) {
+            message.textContent = 'Bonus terbuka! Kamu mendapat 12 putaran gratis.';
+        } else if (roundPoints > 0) {
+            message.textContent = `Kombinasi cocok: +${roundPoints.toLocaleString('id-ID')} poin hiburan.`;
+        } else if (isBonusSpin) {
+            message.textContent = `Putaran bonus selesai. ${freeSpinsSisa} putaran gratis tersisa.`;
+        } else {
+            message.textContent = 'Belum ada kombinasi kali ini. Coba tantangan gratis lagi!';
+        }
+
+        spinButton.disabled = false;
+        updateTileGameSpinButton();
+        updateTileGameMultipliers();
+        if (audioContext) {
+            if (hasScatter && !isBonusSpin) playTileBonusSound(audioContext);
+            else playTileChime(audioContext);
+        }
+        if (isFreeSpinMode && freeSpinsSisa > 0) {
+            tileGameAutoSpinTimeout = window.setTimeout(() => {
+                tileGameAutoSpinTimeout = null;
+                spinTileGame();
+            }, 550);
+        }
+    }, 1_500);
+}
+
+function updateTileGameSpinButton() {
+    const spinLabel = document.getElementById('tileGameSpinLabel');
+    const spinButton = document.getElementById('tileGameSpinButton');
+    if (!spinLabel || !spinButton) return;
+
+    spinLabel.textContent = isFreeSpinMode && freeSpinsSisa > 0
+        ? `FREE SPIN: ${freeSpinsSisa}`
+        : 'PUTAR GRATIS';
+    spinButton.setAttribute('aria-label', spinLabel.textContent);
+    spinButton.classList.toggle('is-free-spin', isFreeSpinMode && freeSpinsSisa > 0);
+}
+
+function updateTileGameMultipliers(activeMultiplier) {
+    const multiplierElements = [...document.querySelectorAll('.tile-game-multiplier')];
+    const bonusMultipliers = [2, 4, 6, 10];
+    const isBonus = isFreeSpinMode && freeSpinsSisa > 0;
+    const activeBonusIndex = Math.min(3, Math.floor((12 - freeSpinsSisa) / 3));
+
+    multiplierElements.forEach((element, index) => {
+        const value = isBonus ? bonusMultipliers[index] : [1, 2, 3, 5][index];
+        element.textContent = `x${value}`;
+        element.dataset.multiplier = String(value);
+        element.classList.toggle(
+            'is-active',
+            activeMultiplier !== undefined
+                ? value === activeMultiplier
+                : isBonus ? index === activeBonusIndex : index === 0
+        );
+    });
+    updateTileGameSpinButton();
 }
 
 function formatMoney(amount) {
