@@ -324,6 +324,7 @@ textarea:focus {
 .tile-game-board {
     display: grid;
     grid-template-columns: repeat(5, minmax(0, 1fr));
+    align-items: start;
     gap: 6px;
     padding: 9px;
     border: 1px solid #94a3b8;
@@ -334,7 +335,8 @@ textarea:focus {
 .tile-game-cell {
     display: flex;
     min-width: 0;
-    min-height: clamp(48px, 13vw, 68px);
+    height: clamp(42px, 11vw, 58px);
+    min-height: 0;
     align-items: center;
     justify-content: center;
     overflow: hidden;
@@ -355,16 +357,37 @@ textarea:focus {
     letter-spacing: 0.02em;
 }
 
-.tile-game-board.is-spinning .tile-game-cell {
-    animation: tileShuffle 0.18s ease-in-out infinite alternate;
+.tile-game-reel {
+    height: clamp(183px, calc(44vw + 15px), 247px);
+    min-width: 0;
+    overflow: hidden;
 }
 
-@keyframes tileShuffle {
-    from {
-        transform: translateY(-2px);
-    }
+.tile-game-reel-track {
+    display: flex;
+    flex-direction: column;
+    transform: translateY(-50%);
+}
+
+.tile-game-reel-cycle {
+    display: grid;
+    flex: 0 0 50%;
+    grid-template-rows: repeat(4, minmax(0, 1fr));
+    gap: 5px;
+}
+
+.tile-game-reel-cycle[aria-hidden="true"] {
+    pointer-events: none;
+}
+
+.tile-game-reel.is-spinning .tile-game-reel-track {
+    animation: tileReelScroll 0.16s linear infinite;
+    will-change: transform;
+}
+
+@keyframes tileReelScroll {
     to {
-        transform: translateY(2px);
+        transform: translateY(0);
     }
 }
 
@@ -394,8 +417,26 @@ textarea:focus {
 
 .tile-game-spin-area {
     display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
     justify-content: center;
     padding-top: 12px;
+}
+
+.tile-game-turbo-button {
+    padding: 6px 10px;
+    border: 1px solid #d6a64a;
+    border-radius: 999px;
+    background: #fff4c2;
+    color: #60220d;
+    font-size: 10px;
+    font-weight: 800;
+}
+
+.tile-game-turbo-button[aria-pressed="true"] {
+    background: #f8c64f;
+    color: #7f1d1d;
 }
 
 .tile-game-spin-button {
@@ -922,7 +963,6 @@ textarea:focus {
 }
 
 .tile-game-board {
-    grid-template-rows: repeat(4, minmax(0, 1fr));
     gap: 5px;
     padding: 8px;
     border: 3px solid #d6a64a;
@@ -970,11 +1010,11 @@ textarea:focus {
     will-change: transform, opacity;
 }
 
-.tile-game-board.shatter-left .tile-game-cell:nth-child(5n + 1) { animation-delay: 0ms; }
-.tile-game-board.shatter-left .tile-game-cell:nth-child(5n + 2) { animation-delay: 55ms; }
-.tile-game-board.shatter-left .tile-game-cell:nth-child(5n + 3) { animation-delay: 110ms; }
-.tile-game-board.shatter-left .tile-game-cell:nth-child(5n + 4) { animation-delay: 165ms; }
-.tile-game-board.shatter-left .tile-game-cell:nth-child(5n) { animation-delay: 220ms; }
+.tile-game-board.shatter-left .tile-game-reel:nth-child(1) .tile-game-cell { animation-delay: 0ms; }
+.tile-game-board.shatter-left .tile-game-reel:nth-child(2) .tile-game-cell { animation-delay: 55ms; }
+.tile-game-board.shatter-left .tile-game-reel:nth-child(3) .tile-game-cell { animation-delay: 110ms; }
+.tile-game-board.shatter-left .tile-game-reel:nth-child(4) .tile-game-cell { animation-delay: 165ms; }
+.tile-game-board.shatter-left .tile-game-reel:nth-child(5) .tile-game-cell { animation-delay: 220ms; }
 
 @keyframes tileShatterLeft {
     to {
@@ -1042,6 +1082,10 @@ textarea:focus {
     box-shadow: inset 0 2px 5px rgba(255, 255, 255, 0.45), 0 5px 12px rgba(13, 69, 34, 0.5);
 }
 
+.tile-game-turbo-button {
+    background: linear-gradient(180deg, #fff4c2, #dba842);
+}
+
 .tile-game-spin-button i {
     font-size: 23px;
 }
@@ -1090,7 +1134,16 @@ textarea:focus {
         padding: 5px;
     }
 
+    .tile-game-reel {
+        height: 169px;
+    }
+
+    .tile-game-reel-cycle {
+        gap: 3px;
+    }
+
     .tile-game-cell {
+        height: 40px;
         min-height: 40px;
         border-width: 1px;
     }

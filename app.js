@@ -39,17 +39,20 @@ let appConfig = null;
 let historyTypeFilter = 'all';
 let activeHistoryFilter = 'all';
 let historySearchQuery = '';
-let tileGameInterval = null;
+let isTileGameSpinning = false;
 let tileGameTimeout = null;
 let tileGameAutoSpinTimeout = null;
 let tileGameShatterTimeout = null;
+let tileGameReelTimeouts = [];
 let freeSpinsSisa = 0;
 let isFreeSpinMode = false;
 let tileGamePoints = 0;
 let freeSpinSessionPoints = 0;
 let tileGameAudioContext = null;
 let tileGameBgmInterval = null;
-const tileGameBgmOscillators = new Set();
+let tileGameBgmVoices = [];
+let tileGameBgmNoteIndex = 0;
+let isTileGameTurbo = false;
 
 const translations = {
     en: {
@@ -382,10 +385,7 @@ function ensureUserProfile() {
 }
 
 function stopTileGameSpin() {
-    if (tileGameInterval !== null) {
-        window.clearInterval(tileGameInterval);
-        tileGameInterval = null;
-    }
+    isTileGameSpinning = false;
     if (tileGameTimeout !== null) {
         window.clearTimeout(tileGameTimeout);
         tileGameTimeout = null;
@@ -398,13 +398,20 @@ function stopTileGameSpin() {
         window.clearTimeout(tileGameShatterTimeout);
         tileGameShatterTimeout = null;
     }
+    tileGameReelTimeouts.forEach(timeout => window.clearTimeout(timeout));
+    tileGameReelTimeouts = [];
     const spinButton = document.getElementById('tileGameSpinButton');
     if (spinButton) {
         spinButton.disabled = false;
         updateTileGameSpinButton();
     }
     const board = document.getElementById('tileGameBoard');
-    if (board) board.classList.remove('is-spinning', 'shatter-left');
+    if (board) {
+        board.classList.remove('is-spinning', 'shatter-left');
+        board.querySelectorAll('.tile-game-reel').forEach(reel => reel.classList.remove('is-spinning'));
+    }
+    const turboButton = document.getElementById('tileGameTurboButton');
+    if (turboButton) turboButton.disabled = false;
 }
 
 function openAccountSubpage(panelId) {
@@ -425,6 +432,7 @@ function openAccountSubpage(panelId) {
         document.getElementById('passwordForm').reset();
         document.getElementById('passwordFormMessage').classList.add('hidden');
     } else if (panelId === 'tileGamePanel') {
+        ensureTileGameReels();
         startTileGameBgm();
     }
 }
@@ -444,7 +452,9 @@ function getTileGameAudioContext() {
         if (AudioContextClass) tileGameAudioContext = new AudioContextClass();
     }
     if (tileGameAudioContext && tileGameAudioContext.state === 'suspended') {
-        tileGameAudioContext.resume();
+        tileGameAudioContext.resume().catch(error => {
+            console.error('Audio tantangan ubin tidak dapat dimulai:', error);
+        });
     }
     return tileGameAudioContext;
 }
@@ -453,27 +463,37 @@ function startTileGameBgm() {
     const audioContext = getTileGameAudioContext();
     if (!audioContext || tileGameBgmInterval !== null) return;
 
+    if (tileGameBgmVoices.length === 0) {
+        tileGameBgmVoices = [
+            { oscillator: audioContext.createOscillator(), gain: audioContext.createGain(), volume: 0.018 },
+            { oscillator: audioContext.createOscillator(), gain: audioContext.createGain(), volume: 0.008 }
+        ];
+        tileGameBgmVoices.forEach((voice, index) => {
+            voice.oscillator.type = index === 0 ? 'sine' : 'triangle';
+            voice.gain.gain.value = 0;
+            voice.oscillator.connect(voice.gain);
+            voice.gain.connect(audioContext.destination);
+            voice.oscillator.start();
+        });
+    }
+
     const notes = [261.63, 329.63, 392, 329.63, 293.66, 349.23, 440, 349.23];
-    let noteIndex = 0;
     const playNote = () => {
         if (audioContext.state !== 'running') return;
         const startTime = audioContext.currentTime;
-        const oscillator = audioContext.createOscillator();
-        const gain = audioContext.createGain();
-        oscillator.type = 'sine';
-        oscillator.frequency.setValueAtTime(notes[noteIndex], startTime);
-        gain.gain.setValueAtTime(0.001, startTime);
-        gain.gain.linearRampToValueAtTime(0.012, startTime + 0.06);
-        gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.5);
-        oscillator.connect(gain);
-        gain.connect(audioContext.destination);
-        tileGameBgmOscillators.add(oscillator);
-        oscillator.addEventListener('ended', () => tileGameBgmOscillators.delete(oscillator), { once: true });
-        oscillator.start(startTime);
-        oscillator.stop(startTime + 0.52);
-        noteIndex = (noteIndex + 1) % notes.length;
+        const note = notes[tileGameBgmNoteIndex];
+        const voices = tileGameBgmVoices;
+        voices[0].oscillator.frequency.setTargetAtTime(note, startTime, 0.035);
+        voices[0].gain.gain.setTargetAtTime(voices[0].volume, startTime, 0.04);
+        voices[1].oscillator.frequency.setTargetAtTime(note / 2, startTime, 0.05);
+        voices[1].gain.gain.setTargetAtTime(voices[1].volume, startTime, 0.05);
+        tileGameBgmNoteIndex = (tileGameBgmNoteIndex + 1) % notes.length;
     };
 
+    tileGameBgmVoices.forEach(voice => {
+        voice.gain.gain.setTargetAtTime(voice.volume, audioContext.currentTime, 0.04);
+    });
+    tileGameBgmNoteIndex = 0;
     playNote();
     tileGameBgmInterval = window.setInterval(playNote, 560);
 }
@@ -483,14 +503,65 @@ function stopTileGameBgm() {
         window.clearInterval(tileGameBgmInterval);
         tileGameBgmInterval = null;
     }
-    tileGameBgmOscillators.forEach(oscillator => {
-        try {
-            oscillator.stop();
-        } catch (error) {
-            if (error.name !== 'InvalidStateError') throw error;
-        }
+    tileGameBgmNoteIndex = 0;
+    if (!tileGameAudioContext) return;
+
+    const stopTime = tileGameAudioContext.currentTime;
+    tileGameBgmVoices.forEach(voice => {
+        voice.gain.gain.setValueAtTime(0, stopTime);
     });
-    tileGameBgmOscillators.clear();
+    if (tileGameAudioContext.state === 'running') {
+        tileGameAudioContext.suspend().catch(error => {
+            console.error('Audio tantangan ubin tidak dapat dihentikan:', error);
+        });
+    }
+}
+
+function ensureTileGameReels() {
+    const board = document.getElementById('tileGameBoard');
+    if (!board || board.querySelector('.tile-game-reel')) return;
+
+    const cells = [...board.querySelectorAll('.tile-game-cell')];
+    if (cells.length === 0 || cells.length % 5 !== 0) {
+        console.error('Papan tantangan ubin harus berisi jumlah ubin yang dapat dibagi rata ke lima kolom.');
+        return;
+    }
+
+    const rowCount = cells.length / 5;
+    const reels = Array.from({ length: 5 }, (_, columnIndex) => {
+        const reel = document.createElement('div');
+        const track = document.createElement('div');
+        const cycle = document.createElement('div');
+        reel.className = 'tile-game-reel';
+        track.className = 'tile-game-reel-track';
+        cycle.className = 'tile-game-reel-cycle';
+
+        for (let rowIndex = 0; rowIndex < rowCount; rowIndex++) {
+            cycle.append(cells[rowIndex * 5 + columnIndex]);
+        }
+        const duplicateCycle = cycle.cloneNode(true);
+        duplicateCycle.setAttribute('aria-hidden', 'true');
+        track.append(cycle, duplicateCycle);
+        reel.append(track);
+        return reel;
+    });
+
+    board.replaceChildren(...reels);
+}
+
+function setTileGameTile(cell, tile) {
+    cell.textContent = tile.glyph;
+    cell.setAttribute('aria-label', tile.name);
+    cell.title = tile.name;
+}
+
+function toggleTileGameTurbo() {
+    if (isTileGameSpinning) return;
+    isTileGameTurbo = !isTileGameTurbo;
+    const turboButton = document.getElementById('tileGameTurboButton');
+    if (!turboButton) return;
+    turboButton.setAttribute('aria-pressed', String(isTileGameTurbo));
+    turboButton.textContent = isTileGameTurbo ? 'MODE: TURBO' : 'MODE: NORMAL';
 }
 
 function playTileShuffleSound(audioContext) {
@@ -542,7 +613,7 @@ function playTileBonusSound(audioContext) {
 }
 
 function spinTileGame() {
-    if (tileGameInterval !== null) return;
+    if (isTileGameSpinning) return;
 
     const tiles = [
         { name: 'Naga Hijau', glyph: '🐉' },
@@ -553,10 +624,17 @@ function spinTileGame() {
         { name: 'Ubin 8 Balok', glyph: '八' },
         { name: 'SCATTER', glyph: '散' }
     ];
-    const cells = [...document.querySelectorAll('#tileGameBoard .tile-game-cell')];
+    ensureTileGameReels();
     const board = document.getElementById('tileGameBoard');
     const message = document.getElementById('tileGameMessage');
     const spinButton = document.getElementById('tileGameSpinButton');
+    const turboButton = document.getElementById('tileGameTurboButton');
+    const reels = [...board.querySelectorAll('.tile-game-reel')];
+    const rowCount = reels[0]?.querySelector('.tile-game-reel-cycle')?.children.length || 0;
+    if (reels.length !== 5 || rowCount === 0) return;
+    const reelCells = reels.map(reel => [
+        ...reel.querySelector('.tile-game-reel-cycle').querySelectorAll('.tile-game-cell')
+    ]);
     const isBonusSpin = isFreeSpinMode && freeSpinsSisa > 0;
     const bonusSpinIndex = 12 - freeSpinsSisa;
     const bonusMultipliers = [2, 4, 6, 10];
@@ -565,85 +643,122 @@ function spinTileGame() {
         : 1;
     const audioContext = getTileGameAudioContext();
 
+    isTileGameSpinning = true;
     spinButton.disabled = true;
+    if (turboButton) turboButton.disabled = true;
     board.classList.add('is-spinning');
+    reels.forEach(reel => reel.classList.add('is-spinning'));
     message.textContent = isBonusSpin
         ? `Putaran bonus sedang diacak (${freeSpinsSisa} tersisa)...`
         : 'Ubin sedang diacak...';
     if (audioContext) playTileShuffleSound(audioContext);
     updateTileGameMultipliers(isBonusSpin ? multiplier : 1);
 
-    const drawTiles = () => cells.map(cell => {
-        const tile = Math.random() < 0.004
-            ? tiles[tiles.length - 1]
-            : tiles[Math.floor(Math.random() * (tiles.length - 1))];
-        cell.textContent = tile.glyph;
-        cell.setAttribute('aria-label', tile.name);
-        cell.title = tile.name;
-        return tile;
-    });
+    const makeRandomTile = () => Math.random() < 0.08
+        ? tiles[tiles.length - 1]
+        : tiles[Math.floor(Math.random() * (tiles.length - 1))];
+    const setReelCycle = (reelIndex, rowIndex, tile) => {
+        setTileGameTile(reelCells[reelIndex][rowIndex], tile);
+        const duplicateCell = reels[reelIndex].querySelectorAll(
+            '.tile-game-reel-cycle[aria-hidden="true"] .tile-game-cell'
+        )[rowIndex];
+        setTileGameTile(duplicateCell, tile);
+    };
+    const randomizeReels = () => {
+        reelCells.forEach((cellsForReel, reelIndex) => {
+            cellsForReel.forEach((_, rowIndex) => {
+                setReelCycle(reelIndex, rowIndex, makeRandomTile());
+            });
+        });
+    };
 
-    drawTiles();
-    tileGameInterval = window.setInterval(drawTiles, 75);
+    randomizeReels();
+    const spinDuration = isTileGameTurbo ? 300 : 1_260;
+    const reelStopDelay = isTileGameTurbo ? 50 : 60;
     tileGameTimeout = window.setTimeout(() => {
-        window.clearInterval(tileGameInterval);
-        tileGameInterval = null;
         tileGameTimeout = null;
-        board.classList.remove('is-spinning');
-        const result = drawTiles();
-        const symbolCounts = result.reduce((counts, tile) => {
-            if (tile.name !== 'SCATTER') counts[tile.name] = (counts[tile.name] || 0) + 1;
-            return counts;
-        }, {});
-        const matchingTiles = Math.max(0, ...Object.values(symbolCounts).filter(count => count >= 3));
-        const roundPoints = matchingTiles * 10 * multiplier;
-        const hasScatter = result.some(tile => tile.name === 'SCATTER');
-        tileGamePoints += roundPoints;
-        document.getElementById('tileGameWin').textContent = tileGamePoints.toLocaleString('id-ID');
-        if (matchingTiles >= 3) {
-            board.classList.add('shatter-left');
-            tileGameShatterTimeout = window.setTimeout(() => {
-                board.classList.remove('shatter-left');
-                tileGameShatterTimeout = null;
-            }, 620);
-        }
+        const result = reelCells.map(cellsForReel => cellsForReel.map(() => makeRandomTile()));
+        const stopReel = (reelIndex) => {
+            const reel = reels[reelIndex];
+            reel.classList.remove('is-spinning');
+            reelCells[reelIndex].forEach((_, rowIndex) => {
+                setReelCycle(reelIndex, rowIndex, result[reelIndex][rowIndex]);
+            });
+        };
+        reels.forEach((_, reelIndex) => {
+            const timeout = window.setTimeout(() => stopReel(reelIndex), reelIndex * reelStopDelay);
+            tileGameReelTimeouts.push(timeout);
+        });
 
-        if (isBonusSpin) {
-            freeSpinsSisa -= 1;
-            freeSpinSessionPoints += roundPoints;
+        const finishSpin = () => {
+            tileGameReelTimeouts = [];
+            tileGameTimeout = null;
+            isTileGameSpinning = false;
+            board.classList.remove('is-spinning');
+            const flatResult = result.flat();
+            const symbolCounts = flatResult.reduce((counts, tile) => {
+                if (tile.name !== 'SCATTER') counts[tile.name] = (counts[tile.name] || 0) + 1;
+                return counts;
+            }, {});
+            const matchingTiles = Math.max(0, ...Object.values(symbolCounts).filter(count => count >= 3));
+            const scatterCount = flatResult.filter(tile => tile.name === 'SCATTER').length;
+            const bonusTriggered = scatterCount >= 3;
+            const scatterZonk = scatterCount > 0 && !bonusTriggered;
+            const roundPoints = scatterZonk ? 0 : matchingTiles * 10 * multiplier;
+            tileGamePoints += roundPoints;
+            document.getElementById('tileGameWin').textContent = tileGamePoints.toLocaleString('id-ID');
+            if (roundPoints > 0 && matchingTiles >= 3) {
+                board.classList.add('shatter-left');
+                tileGameShatterTimeout = window.setTimeout(() => {
+                    board.classList.remove('shatter-left');
+                    tileGameShatterTimeout = null;
+                }, 620);
+            }
+
+            if (isBonusSpin) {
+                freeSpinsSisa -= 1;
+                freeSpinSessionPoints += roundPoints;
+            }
+            if (bonusTriggered) {
+                freeSpinsSisa = 12;
+                freeSpinSessionPoints = 0;
+            }
             isFreeSpinMode = freeSpinsSisa > 0;
-        } else if (hasScatter) {
-            freeSpinsSisa = 12;
-            isFreeSpinMode = true;
-            freeSpinSessionPoints = 0;
-        }
 
-        if (isBonusSpin && freeSpinsSisa === 0) {
-            message.textContent = `Sesi gratis selesai! Total skor hiburan: ${freeSpinSessionPoints.toLocaleString('id-ID')} poin.`;
-        } else if (!isBonusSpin && hasScatter) {
-            message.textContent = 'Bonus terbuka! Kamu mendapat 12 putaran gratis.';
-        } else if (roundPoints > 0) {
-            message.textContent = `Kombinasi cocok: +${roundPoints.toLocaleString('id-ID')} poin hiburan.`;
-        } else if (isBonusSpin) {
-            message.textContent = `Putaran bonus selesai. ${freeSpinsSisa} putaran gratis tersisa.`;
-        } else {
-            message.textContent = 'Belum ada kombinasi kali ini. Coba tantangan gratis lagi!';
-        }
+            if (bonusTriggered) {
+                message.textContent = `Bonus terbuka! ${scatterCount} SCATTER memberi 12 putaran gratis.`;
+            } else if (scatterZonk) {
+                message.textContent = isBonusSpin && freeSpinsSisa === 0
+                    ? `${scatterCount} SCATTER belum cukup untuk bonus. Putaran ini zonk. Sesi gratis selesai dengan ${freeSpinSessionPoints.toLocaleString('id-ID')} poin.`
+                    : `${scatterCount} SCATTER belum cukup untuk bonus. Putaran ini zonk.`;
+            } else if (isBonusSpin && freeSpinsSisa === 0) {
+                message.textContent = `Sesi gratis selesai! Total skor hiburan: ${freeSpinSessionPoints.toLocaleString('id-ID')} poin.`;
+            } else if (roundPoints > 0) {
+                message.textContent = `Kombinasi cocok: +${roundPoints.toLocaleString('id-ID')} poin hiburan.`;
+            } else if (isBonusSpin) {
+                message.textContent = `Putaran bonus selesai. ${freeSpinsSisa} putaran gratis tersisa.`;
+            } else {
+                message.textContent = 'Belum ada kombinasi kali ini. Coba tantangan gratis lagi!';
+            }
 
-        spinButton.disabled = false;
-        updateTileGameSpinButton();
-        updateTileGameMultipliers();
-        if (audioContext) {
-            if (hasScatter && !isBonusSpin) playTileBonusSound(audioContext);
-            else playTileChime(audioContext);
-        }
-        if (isFreeSpinMode && freeSpinsSisa > 0) {
-            tileGameAutoSpinTimeout = window.setTimeout(() => {
-                tileGameAutoSpinTimeout = null;
-                spinTileGame();
-            }, 550);
-        }
-    }, 1_500);
+            spinButton.disabled = false;
+            if (turboButton) turboButton.disabled = false;
+            updateTileGameSpinButton();
+            updateTileGameMultipliers();
+            if (audioContext) {
+                if (bonusTriggered) playTileBonusSound(audioContext);
+                else if (!scatterZonk) playTileChime(audioContext);
+            }
+            if (isFreeSpinMode && freeSpinsSisa > 0) {
+                tileGameAutoSpinTimeout = window.setTimeout(() => {
+                    tileGameAutoSpinTimeout = null;
+                    spinTileGame();
+                }, 550);
+            }
+        };
+
+        tileGameTimeout = window.setTimeout(finishSpin, (reels.length - 1) * reelStopDelay);
+    }, spinDuration);
 }
 
 function updateTileGameSpinButton() {
