@@ -38,6 +38,7 @@ let displayedCalendarMonth = new Date(new Date().getFullYear(), new Date().getMo
 let appConfig = null;
 let historyTypeFilter = 'all';
 let activeHistoryFilter = 'all';
+let historySearchQuery = '';
 
 const translations = {
     en: {
@@ -72,6 +73,9 @@ const translations = {
         motivationLowBalance: 'Balance is running low—maybe give impulse buys a little timeout.',
         motivationHighSpending: 'Spending is lively this month. Your budget may appreciate a quiet day.',
         motivationPositive: 'Good progress—your money is working toward your plans.',
+        categoryBudgetWarning: 'Spending on {category} has exceeded the safe limit! Time to tighten the budget.',
+        historySearchPlaceholder: 'Search transactions...',
+        confirmDeleteAllTransactions: 'Are you sure you want to delete all transaction history?',
         confirmDeleteTransaction: 'Are you sure you want to delete "{title}" ({amount})? Your balance will be adjusted.',
         allocated: 'Allocated', foodDrinks: 'Food & Drinks', transport: 'Transport', shopping: 'Shopping', other: 'Other',
         ageYears: 'years old',
@@ -114,6 +118,9 @@ const translations = {
         motivationLowBalance: 'Saldo mulai menipis—coba beri jeda sebentar untuk belanja impulsif.',
         motivationHighSpending: 'Pengeluaran bulan ini cukup aktif. Anggaran mungkin butuh hari tenang.',
         motivationPositive: 'Progres bagus—uangmu sedang bergerak menuju rencana yang kamu buat.',
+        categoryBudgetWarning: 'Pengeluaran {category} udah melebihi batas aman! Harap hemat-hemat lagi!',
+        historySearchPlaceholder: 'Cari transaksi...',
+        confirmDeleteAllTransactions: 'Apakah Anda yakin ingin menghapus seluruh riwayat transaksi?',
         confirmDeleteTransaction: 'Apakah Anda yakin ingin menghapus "{title}" ({amount})? Saldo akan disesuaikan.',
         allocated: 'Dialokasikan', foodDrinks: 'Makanan & Minuman', transport: 'Transportasi', shopping: 'Belanja', other: 'Lainnya',
         ageYears: 'tahun',
@@ -195,25 +202,50 @@ function populateCategoryOptions(type = 'expense') {
     });
 }
 
-function renderHomeBreakdown(totals, totalSpent) {
+function renderHomeBreakdown(totals, currentBalance) {
     const container = document.getElementById('homeBreakdownList');
     container.replaceChildren();
+    const warning = document.getElementById('categoryBudgetWarning');
+    let warningCategory = null;
 
-    getExpenseCategories().filter(category => category.showInHomeBreakdown).forEach(category => {
+    getExpenseCategories().forEach(category => {
         const row = document.createElement('div');
         row.className = 'flex items-center justify-between';
-        const percentage = totalSpent > 0
-            ? Math.round((totals[category.reportKey] / totalSpent) * 100)
-            : 0;
+        const categoryTotal = Number(totals[category.reportKey]) || 0;
+        const balance = Number(currentBalance);
+        const ratio = balance > 0
+            ? categoryTotal / balance
+            : categoryTotal > 0 ? Infinity : 0;
+        const percentage = Number.isFinite(ratio) ? Math.round(ratio * 100) : '∞';
+        const statusClass = ratio >= 0.3
+            ? 'text-rose-600'
+            : ratio >= 0.1
+                ? 'text-amber-500'
+                : 'text-emerald-600';
+        const indicatorClass = ratio >= 0.3
+            ? 'bg-rose-600'
+            : ratio >= 0.1
+                ? 'bg-amber-400'
+                : 'bg-emerald-500';
+        if (ratio >= 0.3 && !warningCategory) warningCategory = category;
         row.innerHTML = `
             <span class="flex items-center space-x-1.5 text-gray-600">
-                <span class="w-2 h-2 rounded-full ${category.reportColor}"></span>
+                <span class="w-2 h-2 rounded-full ${indicatorClass}"></span>
                 <span>${translate(category.translationKey)}</span>
             </span>
-            <span class="font-semibold text-gray-900">${percentage}%</span>
+            <span class="font-semibold ${statusClass}">${percentage}%</span>
         `;
         container.appendChild(row);
     });
+
+    if (warningCategory) {
+        warning.textContent = translate('categoryBudgetWarning')
+            .replace('{category}', translate(warningCategory.translationKey));
+        warning.classList.remove('hidden');
+    } else {
+        warning.textContent = '';
+        warning.classList.add('hidden');
+    }
 }
 
 async function loadAppConfig() {
@@ -286,7 +318,7 @@ function applyLanguage() {
         translate(isSavingGoal ? 'saveGoal' : 'saveTransaction');
     if (appConfig) {
         const currentType = document.getElementById('txType').value;
-        setModalType(['income', 'expense', 'savingsGoal', 'receivable'].includes(currentType) ? currentType : 'expense');
+        setModalType(['income', 'expense', 'savingsGoal', 'receivable'].includes(currentType) ? currentType : 'expense', false);
     }
     if (currentUser) {
         updateDashboardUI();
@@ -405,13 +437,17 @@ function toggleTheme() {
 function updateDigitalClock() {
     const clock = document.getElementById('digitalClock');
     if (!clock) return;
-    const time = new Intl.DateTimeFormat('en-GB', {
+    const parts = new Intl.DateTimeFormat('en-GB', {
         timeZone: 'Asia/Jakarta',
         hour: '2-digit',
         minute: '2-digit',
+        second: '2-digit',
         hourCycle: 'h23'
-    }).format(new Date());
-    clock.textContent = `${time} WIB`;
+    }).formatToParts(new Date());
+    const time = ['hour', 'minute', 'second']
+        .map(partType => parts.find(part => part.type === partType).value)
+        .join(' - ');
+    clock.textContent = time;
 }
 
 function parseTransactionAmount(value) {
@@ -529,7 +565,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     applyTheme();
     applyLanguage();
     updateDigitalClock();
-    window.setInterval(updateDigitalClock, 60_000);
+    window.setInterval(updateDigitalClock, 1_000);
     document.addEventListener('visibilitychange', () => {
         if (!document.hidden) updateDigitalClock();
     });
@@ -583,7 +619,14 @@ function setupEventListeners() {
             updateReportUI();
         }
     });
-    document.getElementById('txAmount').addEventListener('input', formatTransactionAmountInput);
+    document.getElementById('txAmount').addEventListener('input', event => {
+        formatTransactionAmountInput();
+        event.currentTarget.classList.toggle('is-typing', event.currentTarget.value.length > 0);
+    });
+    document.getElementById('historySearchInput').addEventListener('input', event => {
+        historySearchQuery = event.target.value.trim();
+        renderFullHistory();
+    });
     document.getElementById('savingsGoalAmount').addEventListener('input', event => {
         const digits = event.target.value.replace(/\D/g, '');
         event.target.value = digits ? Number(digits).toLocaleString('id-ID') : '';
@@ -1007,7 +1050,7 @@ function updatePaymentMethodOptions(type) {
     }
 }
 
-function setModalType(type) {
+function setModalType(type, focusAmount = true) {
     if (!['income', 'expense', 'savingsGoal', 'receivable'].includes(type)) return;
 
     const buttons = {
@@ -1039,10 +1082,10 @@ function setModalType(type) {
     amountField.querySelectorAll('input, select, button').forEach(control => {
         control.disabled = isSavingsGoal;
     });
-    titleField.classList.toggle('hidden', isIncome);
+    titleField.classList.toggle('hidden', isIncome || isSavingsGoal);
     titleField.querySelector('label').textContent = translate(isReceivable ? 'borrowerName' : 'transactionName');
     titleField.querySelector('input').placeholder = translate(isReceivable ? 'borrowerPlaceholder' : 'transactionPlaceholder');
-    titleField.querySelector('input').disabled = isIncome;
+    titleField.querySelector('input').disabled = isIncome || isSavingsGoal;
     titleField.querySelector('input').required = !isIncome && !isSavingsGoal;
     categoryField.classList.toggle('hidden', isSavingsGoal || isReceivable);
     categoryField.querySelector('select').disabled = isSavingsGoal || isReceivable;
@@ -1063,16 +1106,33 @@ function setModalType(type) {
     );
     document.querySelector('#transactionForm button[type="submit"]').textContent =
         translate(isSavingsGoal ? 'saveGoal' : 'saveTransaction');
+    if (focusAmount) focusActiveTransactionAmount(type);
+}
+
+function focusActiveTransactionAmount(type) {
+    const modal = document.getElementById('transactionModal');
+    if (modal.classList.contains('hidden')) return;
+
+    const amountInput = document.getElementById(
+        type === 'savingsGoal' ? 'savingsGoalAmount' : 'txAmount'
+    );
+    if (amountInput.disabled || amountInput.closest('.hidden')) return;
+
+    if (amountInput.id === 'txAmount') {
+        amountInput.classList.toggle('is-typing', amountInput.value.length > 0);
+    }
+    window.requestAnimationFrame(() => amountInput.focus());
 }
 
 function handleTransactionSubmit(e) {
     e.preventDefault();
     const type = document.getElementById('txType').value;
     if (type === 'savingsGoal') {
-        saveSavingsGoal(
-            document.getElementById('savingsGoalName').value.trim(),
-            Number(document.getElementById('savingsGoalAmount').value.replace(/[^\d]/g, ''))
+        const savingsGoalName = document.getElementById('savingsGoalName').value.trim();
+        const savingsGoalAmount = Number(
+            document.getElementById('savingsGoalAmount').value.replace(/[^\d]/g, '')
         );
+        saveSavingsGoal(savingsGoalName, savingsGoalAmount);
         return;
     }
 
@@ -1262,21 +1322,22 @@ function updateDashboardUI() {
     
     const txs = currentUser.transactions || [];
     
-    let totalSpent = 0;
-    let totalSalary = 0;
-
-    txs.forEach(t => {
-        if (t.type === 'expense') {
-            totalSpent += t.amount;
-        } else if (t.type === 'income') {
-            totalSalary += t.amount;
-        }
+    const now = new Date();
+    const currentMonthExpenses = txs.filter(transaction => {
+        if (transaction.type !== 'expense') return false;
+        const transactionDate = new Date(transaction.date);
+        return transactionDate.getFullYear() === now.getFullYear() &&
+            transactionDate.getMonth() === now.getMonth();
     });
-    const catTotals = getExpenseCategoryTotals(txs);
+    const currentMonthTotalSpent = currentMonthExpenses.reduce(
+        (total, transaction) => total + (Number(transaction.amount) || 0),
+        0
+    );
+    const catTotals = getExpenseCategoryTotals(currentMonthExpenses);
 
-    document.getElementById('homeTotalSpent').textContent = formatMoney(totalSpent);
+    document.getElementById('homeTotalSpent').textContent = formatMoney(currentMonthTotalSpent);
     updateMotivationMessage(txs);
-    renderHomeBreakdown(catTotals, totalSpent);
+    renderHomeBreakdown(catTotals, currentUser.balance);
 
     const recentContainer = document.getElementById('recentExpensesList');
     recentContainer.innerHTML = '';
@@ -1410,6 +1471,33 @@ function setHistoryFilter(filter) {
     }
 }
 
+function toggleHistorySearch() {
+    const input = document.getElementById('historySearchInput');
+    const willShow = input.classList.contains('hidden');
+    input.classList.toggle('hidden', !willShow);
+    if (willShow) {
+        input.focus();
+        return;
+    }
+
+    input.value = '';
+    historySearchQuery = '';
+    renderFullHistory();
+}
+
+function deleteAllTransactions() {
+    if (!currentUser || !confirm(translate('confirmDeleteAllTransactions'))) return;
+
+    currentUser.transactions = [];
+    currentUser.balance = 0;
+    historySearchQuery = '';
+    document.getElementById('historySearchInput').value = '';
+    saveUserData();
+    updateDashboardUI();
+    updateReportUI();
+    renderMiniCalendar();
+}
+
 function renderFullHistory() {
     const container = document.getElementById('fullHistoryContainer');
     container.innerHTML = '';
@@ -1425,7 +1513,18 @@ function renderFullHistory() {
         .filter(({ transaction }) => historyTypeFilter === 'all' ||
             (historyTypeFilter === 'receivable'
                 ? transaction.type === 'receivable'
-                : transaction.type === historyTypeFilter));
+                : transaction.type === historyTypeFilter))
+        .filter(({ transaction }) => {
+            if (!historySearchQuery) return true;
+            const query = historySearchQuery.toLocaleLowerCase(currentLanguage === 'id' ? 'id-ID' : 'en-US');
+            const title = String(transaction.title || '').toLocaleLowerCase(currentLanguage === 'id' ? 'id-ID' : 'en-US');
+            const category = String(transaction.category || '').toLocaleLowerCase(currentLanguage === 'id' ? 'id-ID' : 'en-US');
+            const translatedCategory = (transaction.category
+                ? translateCategory(transaction.category)
+                : transaction.type === 'receivable' ? translate('receivable') : '')
+                .toLocaleLowerCase(currentLanguage === 'id' ? 'id-ID' : 'en-US');
+            return title.includes(query) || category.includes(query) || translatedCategory.includes(query);
+        });
 
     if (visibleTransactions.length === 0) {
         container.innerHTML = `<p class="text-xs text-gray-400 text-center py-8">${translate('noFilteredTransactions')}</p>`;

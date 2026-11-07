@@ -13,6 +13,45 @@ body > div {
     transition-timing-function: ease;
 }
 
+@keyframes caretRainbow {
+    0%,
+    24% {
+        caret-color: #ef4444;
+    }
+    25%,
+    49% {
+        caret-color: #eab308;
+    }
+    50%,
+    74% {
+        caret-color: #22c55e;
+    }
+    75%,
+    100% {
+        caret-color: #2563eb;
+    }
+}
+
+input,
+textarea {
+    animation: caretRainbow 4s linear infinite;
+}
+
+input:focus,
+textarea:focus {
+    animation: none;
+    caret-color: #0000ff;
+}
+
+#txAmount:focus:not(.is-typing) {
+    animation: caretRainbow 4s linear infinite;
+}
+
+#txAmount:focus.is-typing {
+    animation: none;
+    caret-color: #0000ff;
+}
+
 /* Sembunyikan scrollbar bawaan browser pada menu horizontal filter */
 .hide-scrollbar::-webkit-scrollbar {
     display: none;
