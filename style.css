@@ -738,6 +738,24 @@ textarea:focus {
     color: #1f2937;
 }
 
+.light-mode #mainDashboard .bottom-navigation {
+    border-color: #e5e7eb;
+    background-color: rgba(255, 255, 255, 0.96);
+}
+
+.light-mode .bottom-navigation > button {
+    color: #6b7280;
+}
+
+.light-mode .bottom-navigation > button.text-indigo-400 {
+    color: #4f46e5;
+}
+
+.light-mode .bottom-navigation > button.bg-indigo-600 {
+    background-color: #4f46e5;
+    color: #fff;
+}
+
 .light-mode #mainDashboard .bg-white,
 .light-mode #authScreen .bg-white,
 .light-mode #transactionModal .bg-white,
@@ -814,6 +832,38 @@ textarea:focus {
 .light-mode .transaction-type-button[aria-pressed="true"] {
     background-color: #4f46e5;
     color: #fff;
+}
+
+.light-mode .calculator-panel {
+    border-color: #e5e7eb;
+    background: #fff;
+    color: #111827;
+}
+
+.light-mode .calculator-panel #calculatorTitle {
+    color: #374151;
+}
+
+.light-mode .calculator-close {
+    background: #f3f4f6;
+    color: #4b5563;
+}
+
+.light-mode .calculator-display {
+    color: #111827;
+}
+
+.light-mode .calculator-key:not(.calculator-key-muted):not(.calculator-key-operator):not(.calculator-key-equals) {
+    background: #e5e7eb;
+    color: #111827;
+}
+
+.light-mode .calculator-key:not(.calculator-key-muted):not(.calculator-key-operator):not(.calculator-key-equals):hover {
+    background: #d1d5db;
+}
+
+.light-mode #transactionModal button.bg-gray-900 {
+    background-color: #4b5563;
 }
 
 .calculator-overlay {
@@ -1126,6 +1176,45 @@ textarea:focus {
     border-color: #d4a449;
     background: linear-gradient(180deg, #fff2bf, #dfb254);
     color: #5b210e;
+}
+
+.light-mode .tile-game-shell {
+    border-color: #cbd5e1;
+    background: linear-gradient(150deg, #f8fafc, #e0f2fe);
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+}
+
+.light-mode .tile-game-multiplier,
+.light-mode .tile-game-multiplier.is-active {
+    border-color: #cbd5e1;
+    background: #fff;
+    color: #475569;
+    text-shadow: none;
+    box-shadow: none;
+}
+
+.light-mode .tile-game-multiplier.is-active {
+    border-color: #67e8f9;
+    background: #cffafe;
+    color: #155e75;
+}
+
+.light-mode .tile-game-board {
+    border-color: #94a3b8;
+    background: linear-gradient(145deg, #e2e8f0, #cbd5e1);
+    box-shadow: none;
+}
+
+.light-mode .tile-game-metrics > div {
+    border-color: #cbd5e1;
+    background: #f8fafc;
+    color: #334155;
+}
+
+.light-mode .tile-game-metrics .tile-game-score {
+    border-color: #99f6e4;
+    background: #f0fdfa;
+    color: #115e59;
 }
 
 @media (max-width: 360px) {

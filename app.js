@@ -33,6 +33,11 @@ const savedTheme = localStorage.getItem('fintech_theme');
 let currentTheme = ['dark', 'light'].includes(savedTheme)
     ? savedTheme
     : window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+const savedDailyBudgetDays = Number(localStorage.getItem('fintech_daily_budget_days'));
+let dailyBudgetDays = Number.isInteger(savedDailyBudgetDays) && savedDailyBudgetDays >= 1 && savedDailyBudgetDays <= 365
+    ? savedDailyBudgetDays
+    : 14;
+let editingTransactionIndex = null;
 const USD_TO_IDR = 15500;
 let displayedCalendarMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
 let appConfig = null;
@@ -88,6 +93,9 @@ const translations = {
         motivationHighSpending: 'Spending is lively this month. Your budget may appreciate a quiet day.',
         motivationPositive: 'Good progress—your money is working toward your plans.',
         categoryBudgetWarning: 'Spending on {category} has exceeded the safe limit! Time to tighten the budget.',
+        dailyBudgetTitle: 'Safe Daily Budget', dailyBudgetAllowance: 'Safe allowance', targetDays: 'Target days',
+        spentToday: 'Spent today', editTransaction: 'Edit Transaction',
+        invalidTargetDays: 'Enter a target between 1 and 365 days.',
         historySearchPlaceholder: 'Search transactions...',
         confirmDeleteAllTransactions: 'Are you sure you want to delete all transaction history?',
         confirmDeleteTransaction: 'Are you sure you want to delete "{title}" ({amount})? Your balance will be adjusted.',
@@ -133,6 +141,9 @@ const translations = {
         motivationHighSpending: 'Pengeluaran bulan ini cukup aktif. Anggaran mungkin butuh hari tenang.',
         motivationPositive: 'Progres bagus—uangmu sedang bergerak menuju rencana yang kamu buat.',
         categoryBudgetWarning: 'Pengeluaran {category} udah melebihi batas aman! Harap hemat-hemat lagi!',
+        dailyBudgetTitle: 'Jatah Aman Harian', dailyBudgetAllowance: 'Jatah Aman', targetDays: 'Target Hari',
+        spentToday: 'Terpakai hari ini', editTransaction: 'Edit Transaksi',
+        invalidTargetDays: 'Masukkan target antara 1 sampai 365 hari.',
         historySearchPlaceholder: 'Cari transaksi...',
         confirmDeleteAllTransactions: 'Apakah Anda yakin ingin menghapus seluruh riwayat transaksi?',
         confirmDeleteTransaction: 'Apakah Anda yakin ingin menghapus "{title}" ({amount})? Saldo akan disesuaikan.',
@@ -818,6 +829,7 @@ function escapeHtml(value) {
 function applyTheme() {
     document.documentElement.classList.toggle('dark-mode', currentTheme === 'dark');
     document.documentElement.classList.toggle('light-mode', currentTheme === 'light');
+    document.documentElement.style.colorScheme = currentTheme;
     const toggle = document.getElementById('themeToggle');
     if (toggle) toggle.setAttribute('aria-pressed', String(currentTheme === 'dark'));
 }
@@ -961,6 +973,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     document.getElementById('currencySelector').value = currentCurrency;
+    document.getElementById('dailyBudgetDays').value = String(dailyBudgetDays);
     populateCategoryOptions();
     updatePaymentMethodOptions('expense');
     updateCurrencyLabel();
@@ -1022,6 +1035,7 @@ function setupEventListeners() {
             updateReportUI();
         }
     });
+    document.getElementById('dailyBudgetDays').addEventListener('change', handleDailyBudgetDaysChange);
     document.getElementById('txAmount').addEventListener('input', event => {
         formatTransactionAmountInput();
         event.currentTarget.classList.toggle('is-typing', event.currentTarget.value.length > 0);
@@ -1279,6 +1293,7 @@ function updateBalanceDisplay() {
         const balance = currentUser.balance || 0;
         document.getElementById('displayBalance').textContent = formatMoney(balance);
     }
+    updateDailyBudget();
 }
 
 function updateDailyAllowance() {
@@ -1295,8 +1310,59 @@ function updateDailyAllowance() {
     allowanceElement.classList.toggle('daily-allowance-warning', !isBalanceSensorHidden && dailyAllowance < warningThreshold);
 }
 
+function updateDailyBudget() {
+    if (!currentUser) return;
+    const balance = Number(currentUser.balance) || 0;
+    const dailyAllowance = Math.max(0, balance) / dailyBudgetDays;
+    const now = new Date();
+    const spentToday = (currentUser.transactions || []).reduce((total, transaction) => {
+        if (transaction.type !== 'expense') return total;
+        const transactionDate = new Date(transaction.date);
+        return transactionDate.getFullYear() === now.getFullYear() &&
+            transactionDate.getMonth() === now.getMonth() &&
+            transactionDate.getDate() === now.getDate()
+            ? total + (Number(transaction.amount) || 0)
+            : total;
+    }, 0);
+    const ratio = dailyAllowance > 0 ? spentToday / dailyAllowance : spentToday > 0 ? Infinity : 0;
+    const color = ratio <= 0.8 ? '#4ade80' : ratio <= 1 ? '#facc15' : '#f87171';
+    const percentage = Number.isFinite(ratio) ? Math.min(100, Math.round(ratio * 100)) : 100;
+    const allowanceElement = document.getElementById('dailyBudgetAllowance');
+    const spentElement = document.getElementById('dailyBudgetSpent');
+    const progress = document.getElementById('dailyBudgetProgress');
+    const track = progress.parentElement;
+    const targetInput = document.getElementById('dailyBudgetDays');
+
+    allowanceElement.textContent = isBalanceSensorHidden
+        ? `•••• / ${currentLanguage === 'id' ? 'hari' : 'day'}`
+        : `${formatMoney(dailyAllowance)} / ${currentLanguage === 'id' ? 'hari' : 'day'}`;
+    spentElement.textContent = isBalanceSensorHidden ? '••••' : formatMoney(spentToday);
+    allowanceElement.style.color = color;
+    spentElement.style.color = color;
+    progress.style.width = `${percentage}%`;
+    progress.style.backgroundColor = color;
+    track.setAttribute('aria-valuenow', String(percentage));
+    targetInput.value = String(dailyBudgetDays);
+}
+
+function handleDailyBudgetDaysChange(event) {
+    const targetDays = Number(event.currentTarget.value);
+    if (!Number.isInteger(targetDays) || targetDays < 1 || targetDays > 365) {
+        alert(translate('invalidTargetDays'));
+        event.currentTarget.value = String(dailyBudgetDays);
+        return;
+    }
+
+    dailyBudgetDays = targetDays;
+    localStorage.setItem('fintech_daily_budget_days', String(dailyBudgetDays));
+    updateDailyBudget();
+}
+
 // MODAL TRANSAKSI (TAMBAH PEMASUKAN / PENGELUARAN)
 function openTransactionModal(type = 'expense') {
+    editingTransactionIndex = null;
+    document.getElementById('editingTransactionIndex').value = '';
+    document.getElementById('transactionForm').reset();
     document.getElementById('transactionModal').classList.remove('hidden');
     if (type === 'savingsGoal' && currentUser.savingsGoal) {
         document.getElementById('savingsGoalName').value = currentUser.savingsGoal.name;
@@ -1309,6 +1375,8 @@ function closeTransactionModal() {
     closeCalculator();
     document.getElementById('transactionModal').classList.add('hidden');
     document.getElementById('transactionForm').reset();
+    editingTransactionIndex = null;
+    document.getElementById('editingTransactionIndex').value = '';
 }
 
 function openCalculator() {
@@ -1485,11 +1553,11 @@ function setModalType(type, focusAmount = true) {
     amountField.querySelectorAll('input, select, button').forEach(control => {
         control.disabled = isSavingsGoal;
     });
-    titleField.classList.toggle('hidden', isIncome || isSavingsGoal);
+    titleField.classList.toggle('hidden', (isIncome && editingTransactionIndex === null) || isSavingsGoal);
     titleField.querySelector('label').textContent = translate(isReceivable ? 'borrowerName' : 'transactionName');
     titleField.querySelector('input').placeholder = translate(isReceivable ? 'borrowerPlaceholder' : 'transactionPlaceholder');
-    titleField.querySelector('input').disabled = isIncome || isSavingsGoal;
-    titleField.querySelector('input').required = !isIncome && !isSavingsGoal;
+    titleField.querySelector('input').disabled = (isIncome && editingTransactionIndex === null) || isSavingsGoal;
+    titleField.querySelector('input').required = (!isIncome || editingTransactionIndex !== null) && !isSavingsGoal;
     categoryField.classList.toggle('hidden', isSavingsGoal || isReceivable);
     categoryField.querySelector('select').disabled = isSavingsGoal || isReceivable;
     paymentField.classList.toggle('hidden', isSavingsGoal);
@@ -1505,7 +1573,9 @@ function setModalType(type, focusAmount = true) {
         updatePaymentMethodOptions(isIncome ? 'income' : 'expense');
     }
     document.getElementById('modalTitle').textContent = translate(
-        isSavingsGoal ? 'savingsGoal' : isReceivable ? 'receivable' : isIncome ? 'incomeTitle' : 'expenseTitle'
+        editingTransactionIndex !== null
+            ? 'editTransaction'
+            : isSavingsGoal ? 'savingsGoal' : isReceivable ? 'receivable' : isIncome ? 'incomeTitle' : 'expenseTitle'
     );
     document.querySelector('#transactionForm button[type="submit"]').textContent =
         translate(isSavingsGoal ? 'saveGoal' : 'saveTransaction');
@@ -1544,6 +1614,10 @@ function handleTransactionSubmit(e) {
     const category = type === 'receivable' ? '' : document.getElementById('txCategory').value;
     const paymentMethod = document.getElementById('txPaymentMethod').value;
 
+    if (editingTransactionIndex !== null) {
+        updateTransaction(editingTransactionIndex, type, amount, title, category, paymentMethod);
+        return;
+    }
     saveTransaction(type, amount, title, category, paymentMethod);
 }
 
@@ -1603,9 +1677,119 @@ function saveTransaction(type, amount, title, category, paymentMethod) {
     saveUserData();
     closeTransactionModal();
     updateDashboardUI();
+    updateReportUI();
     displayedCalendarMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
     renderMiniCalendar();
     alertForGamblingTransaction(title);
+}
+
+function openEditTransactionModal(transactionIndex) {
+    const transaction = currentUser && currentUser.transactions && currentUser.transactions[transactionIndex];
+    if (!transaction || !['income', 'expense', 'receivable'].includes(transaction.type)) {
+        alert(currentLanguage === 'id' ? 'Transaksi tidak ditemukan.' : 'Transaction not found.');
+        return;
+    }
+
+    openTransactionModal(transaction.type);
+    editingTransactionIndex = transactionIndex;
+    document.getElementById('editingTransactionIndex').value = String(transactionIndex);
+    setModalType(transaction.type, false);
+
+    const amountInput = document.getElementById('txAmount');
+    amountInput.value = formatTransactionAmountValue(
+        currentCurrency === 'IDR'
+            ? String(Math.round(Number(transaction.amount) * USD_TO_IDR))
+            : Number(transaction.amount).toFixed(2)
+    );
+    document.getElementById('txTitle').value = transaction.title || '';
+    document.getElementById('txTitle').disabled = false;
+    document.getElementById('txTitle').required = true;
+    document.getElementById('txCategory').value = transaction.category || '';
+
+    const paymentSelect = document.getElementById('txPaymentMethod');
+    if (transaction.paymentMethod && ![...paymentSelect.options].some(option => option.value === transaction.paymentMethod)) {
+        const option = document.createElement('option');
+        option.value = transaction.paymentMethod;
+        option.textContent = transaction.paymentMethod;
+        paymentSelect.appendChild(option);
+    }
+    paymentSelect.value = transaction.paymentMethod || paymentSelect.value;
+    document.getElementById('modalTitle').textContent = translate('editTransaction');
+    amountInput.classList.toggle('is-typing', amountInput.value.length > 0);
+}
+
+function recalculateBalanceFromTransactions(transactions) {
+    return transactions.reduce((balance, transaction) => {
+        const amount = Number(transaction.amount) || 0;
+        if (transaction.type === 'income') return balance + amount;
+        if (transaction.type === 'expense' || (transaction.type === 'receivable' && !transaction.settled)) {
+            return balance - amount;
+        }
+        return balance;
+    }, 0);
+}
+
+function updateTransaction(transactionIndex, type, amount, title, category, paymentMethod) {
+    const transactions = currentUser && currentUser.transactions;
+    const transaction = transactions && transactions[transactionIndex];
+    if (!transaction || !Number.isInteger(transactionIndex) ||
+        !['income', 'expense', 'receivable'].includes(type) ||
+        !Number.isFinite(amount) || amount <= 0 ||
+        (!title && type !== 'income')) {
+        alert(currentLanguage === 'id' ? 'Transaksi tidak dapat diperbarui karena datanya tidak valid.' : 'Transaction cannot be updated because its data is invalid.');
+        return;
+    }
+    if (transaction.receivablePaymentFor !== undefined && type !== 'income') {
+        alert(currentLanguage === 'id'
+            ? 'Pembayaran piutang harus tetap bertipe pemasukan.'
+            : 'A receivable payment must remain an income transaction.');
+        return;
+    }
+
+    const validPaymentMethods = type === 'income'
+        ? ['BANK', 'EWALET', 'Cash', 'Local']
+        : ['Cash', 'Transfer / Tf', 'Other'];
+    if (type !== 'receivable' && !validPaymentMethods.includes(paymentMethod)) {
+        alert(currentLanguage === 'id' ? 'Pilih metode pembayaran yang valid.' : 'Select a valid payment method.');
+        return;
+    }
+
+    const amountInUsd = currentCurrency === 'IDR' ? amount / USD_TO_IDR : amount;
+    const wasSettledReceivable = transaction.type === 'receivable' && transaction.settled;
+    const linkedPayment = wasSettledReceivable
+        ? transactions.find(item => item.receivablePaymentFor === transaction.id)
+        : null;
+    transaction.type = type;
+    transaction.title = title || `${translate('income')} - ${paymentMethod}`;
+    transaction.category = category;
+    transaction.paymentMethod = paymentMethod;
+    transaction.amount = amountInUsd;
+
+    if (type === 'receivable') {
+        if (wasSettledReceivable) {
+            transaction.settled = true;
+            if (linkedPayment) {
+                linkedPayment.amount = amountInUsd;
+                linkedPayment.title = `${translate('receivable')}: ${transaction.title}`;
+            }
+        } else {
+            transaction.settled = false;
+            delete transaction.settledAt;
+        }
+    } else {
+        delete transaction.settled;
+        delete transaction.settledAt;
+        if (wasSettledReceivable) {
+            currentUser.transactions = transactions.filter(item => item.receivablePaymentFor !== transaction.id);
+        }
+    }
+
+    currentUser.balance = recalculateBalanceFromTransactions(currentUser.transactions);
+    saveUserData();
+    closeTransactionModal();
+    updateDashboardUI();
+    updateReportUI();
+    renderMiniCalendar();
 }
 
 function markReceivablePaid(transactionIndex) {
@@ -1641,6 +1825,7 @@ function markReceivablePaid(transactionIndex) {
     });
     saveUserData();
     updateDashboardUI();
+    updateReportUI();
     renderMiniCalendar();
 }
 
@@ -1715,6 +1900,7 @@ function deleteTransaction(transactionIndex) {
     transactions.splice(transactionIndex, 1);
     saveUserData();
     updateDashboardUI();
+    updateReportUI();
     renderMiniCalendar();
 }
 
@@ -1960,6 +2146,9 @@ function renderFullHistory() {
                 ${isReceivable && !t.settled ? `<button type="button" onclick="markReceivablePaid(${index})" aria-label="${translate('markLoanPaid')}" title="${translate('markLoanPaid')}" class="w-8 h-8 rounded-lg text-emerald-600 hover:bg-emerald-50 transition"><i class="fa-solid fa-check text-xs"></i></button>` : ''}
                 <button type="button" onclick="deleteTransaction(${index})" aria-label="Hapus transaksi" title="Hapus transaksi" class="w-8 h-8 rounded-lg text-gray-400 hover:text-rose-600 hover:bg-rose-50 transition">
                     <i class="fa-solid fa-trash-can text-xs"></i>
+                </button>
+                <button type="button" onclick="openEditTransactionModal(${index})" aria-label="${translate('editTransaction')}" title="${translate('editTransaction')}" class="w-8 h-8 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition">
+                    <i class="fa-solid fa-pencil text-xs"></i>
                 </button>
             </div>
         `;

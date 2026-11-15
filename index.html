@@ -131,6 +131,29 @@
                     </div>
                 </div>
 
+                <!-- Daily Budget -->
+                <section id="dailyBudgetCard" class="daily-budget-card bg-white border border-gray-100 rounded-2xl p-4 shadow-sm space-y-3" aria-labelledby="dailyBudgetTitle">
+                    <div class="flex justify-between items-start gap-3">
+                        <div>
+                            <h4 id="dailyBudgetTitle" class="text-sm font-bold text-gray-900" data-i18n="dailyBudgetTitle">Jatah Aman Harian</h4>
+                            <p class="mt-1 text-[11px] text-gray-500"><span data-i18n="dailyBudgetAllowance">Jatah Aman</span>: <strong id="dailyBudgetAllowance" class="font-bold">Rp 0 / hari</strong></p>
+                        </div>
+                        <label class="daily-budget-days-label shrink-0 text-[10px] font-semibold text-gray-500">
+                            <span data-i18n="targetDays">Target Hari</span>
+                            <input id="dailyBudgetDays" type="number" min="1" max="365" step="1" value="14" inputmode="numeric" class="daily-budget-days-input mt-1 w-16 rounded-lg border border-gray-200 bg-gray-50 px-2 py-1.5 text-center text-xs font-bold text-gray-700 focus:outline-none focus:border-indigo-600" aria-label="Target hari jatah aman">
+                        </label>
+                    </div>
+                    <div>
+                        <div class="flex justify-between items-center gap-2 text-[11px]">
+                            <span class="text-gray-500" data-i18n="spentToday">Terpakai hari ini</span>
+                            <strong id="dailyBudgetSpent" class="font-bold">Rp 0</strong>
+                        </div>
+                        <div class="daily-budget-track mt-2 h-2 overflow-hidden rounded-full bg-gray-100" role="progressbar" aria-label="Pengeluaran dibanding jatah harian" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                            <div id="dailyBudgetProgress" class="h-full rounded-full transition-all duration-300" style="width: 0%; background-color: #4ade80"></div>
+                        </div>
+                    </div>
+                </section>
+
                 <!-- Spending Breakdown -->
                 <div class="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm space-y-3">
                     <div class="flex justify-between items-center">
@@ -264,8 +287,8 @@
                     </button>
                     <label class="sr-only" for="languageSelector">Language</label>
                     <select id="languageSelector" aria-label="Pilih bahasa" class="px-3 py-2 bg-white border border-gray-200 rounded-xl text-sm font-semibold text-gray-700 shadow-sm focus:outline-none focus:border-indigo-600">
-                        <option value="id">INDONESIA</option>
-                        <option value="en">ENGGRIS</option>
+                        <option value="id">Indonesia</option>
+                        <option value="en">English</option>
                     </select>
                 </div>
                 <div class="space-y-2">
@@ -392,7 +415,7 @@
 
             <!-- Floating Bottom Navigation Bar -->
             <div class="absolute bottom-4 left-4 right-4 z-40">
-                <div class="bg-[#1F2937]/95 backdrop-blur-md rounded-2xl px-4 py-2.5 flex justify-between items-center shadow-2xl border border-white/10">
+                <div class="bottom-navigation bg-[#1F2937]/95 backdrop-blur-md rounded-2xl px-4 py-2.5 flex justify-between items-center shadow-2xl border border-white/10">
                     <button onclick="switchTab('home')" id="navHome" class="flex flex-col items-center space-y-1 text-indigo-400 transition">
                         <i class="fa-solid fa-house text-sm"></i>
                         <span class="text-[9px] font-medium" data-i18n="home">Home</span>
@@ -435,6 +458,7 @@
 
                 <form id="transactionForm" onsubmit="handleTransactionSubmit(event)" class="space-y-4">
                     <input type="hidden" id="txType" value="expense">
+                    <input type="hidden" id="editingTransactionIndex" value="">
                     <div id="transactionAmountFields">
                         <label class="block text-xs font-semibold uppercase tracking-wider text-gray-600 mb-1"><span data-i18n="amount">Amount</span> (<span id="txCurrencyLabel">$</span>)</label>
                         <div class="flex items-center gap-2">
