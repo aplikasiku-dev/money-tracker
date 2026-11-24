@@ -1,1490 +1,1264 @@
-// ==================== GLOBAL STATE & I18N ====================
-const STORAGE_KEY = 'sakupintar_fintech_v2_zero';
-const USD_RATE = 15500; // Conversion rate for IDR <-> USD display & scaling
+/* ==========================================================================
+   SAKUPINTAR CORE LOGIC — AUTO-PILOT PERSONAL FINANCE (LOCALSTORAGE)
+   ========================================================================== */
 
-const I18N = {
-    id: {
-        appTagline: 'Keuangan Pribadi Cerdas',
-        authHeadline: 'Kelola Uang Lebih Cerdas',
-        authDescription: 'Atur pengeluaran, jaga anggaran harian, dan capai target masa depan dalam satu tempat.',
-        namePlaceholder: 'Contoh: Amjad',
-        passwordPlaceholder: 'Masukkan PIN atau kata sandi',
-        authRequired: 'Nama lengkap dan PIN atau kata sandi wajib diisi.',
-        txNamePlaceholder: 'Contoh: Makan siang atau Gaji',
-        walletNamePlaceholder: 'Contoh: Bank atau E-Wallet',
-        goalNamePlaceholder: 'Contoh: Dana darurat atau Laptop',
-        borrowerPlaceholder: 'Contoh: Budi',
-        walletStartsAtZero: 'Dompet baru dimulai dengan saldo 0.',
-        itemCount: 'item',
-        deleteTitle: 'Hapus transaksi',
-        toggleCalculator: 'Buka atau tutup kalkulator',
-        showBalance: 'Tampilkan saldo',
-        hideBalance: 'Sembunyikan saldo',
-        switchCurrency: 'Ganti mata uang',
-        switchLanguage: 'Ganti bahasa',
-        switchTheme: 'Ganti mode tampilan',
-        addTransaction: 'Tambah transaksi',
-        lentWallet: 'Sumber dompet dipinjamkan',
-        colorIndigo: 'Biru Indigo',
-        colorEmerald: 'Hijau Zamrud',
-        colorAmber: 'Jingga Amber',
-        colorRose: 'Merah Muda',
-        colorPurple: 'Ungu Royal',
-        loginTab: 'Masuk',
-        registerTab: 'Daftar Akun',
-        fullName: 'Nama Lengkap',
-        pinPassword: 'PIN / Kata Sandi',
-        loginBtn: 'Masuk ke Akun',
-        registerBtn: 'Daftar & Masuk',
-        orText: 'atau',
-        guestBtn: 'Masuk sebagai Tamu',
-        netWorth: 'Total Kekayaan Bersih',
-        monthIncome: 'Pemasukan Bulan Ini',
-        monthExpense: 'Pengeluaran Bulan Ini',
-        myWallets: 'Dompet Saya',
-        addWallet: 'Tambah Dompet',
-        dailySafeTitle: 'Jatah Aman Harian',
-        setBtn: 'Atur',
-        remainingToday: 'Sisa Jatah Hari Ini',
-        spentToday: 'Terpakai:',
-        recentTransactions: '5 Transaksi Terakhir',
-        seeAll: 'Lihat Semua',
-        historyTitle: 'Riwayat Transaksi',
-        allMonths: 'Semua Bulan',
-        allTypes: 'Semua Tipe',
-        expense: 'Pengeluaran',
-        income: 'Pemasukan',
-        transfer: 'Transfer',
-        allWallets: 'Semua Dompet',
-        goalsDebtsTitle: 'Target & Piutang',
-        savingGoalsTab: 'Target Nabung',
-        receivablesTab: 'Catatan Piutang',
-        newGoalBtn: '+ Buat Target Nabung Baru',
-        newDebtBtn: '+ Catat Piutang Baru',
-        reportAccountTitle: 'Laporan & Akun',
-        monthlySummary: 'Ringkasan Keuangan Bulanan',
-        totalIncome: 'Total Pemasukan',
-        totalExpense: 'Total Pengeluaran',
-        cashflowRatio: 'Rasio Arus Kas',
-        expenseByCategory: 'Pengeluaran per Kategori',
-        accountSettings: 'Pengaturan Akun',
-        profileName: 'Nama Profil',
-        saveBtn: 'Simpan',
-        currencyLabel: 'Mata Uang Utama',
-        languageLabel: 'Bahasa Aplikasi',
-        dataManagement: 'Manajemen Data',
-        exportCsvBtn: 'Export Laporan ke CSV / Excel',
-        backupJsonBtn: 'Backup Data (Download JSON)',
-        restoreJsonBtn: 'Restore Data (Upload JSON)',
-        resetDataBtn: 'Reset Semua Data',
-        logoutBtn: 'Keluar Akun (Logout)',
-        navHome: 'Beranda',
-        navHistory: 'Riwayat',
-        navGoals: 'Target',
-        navReport: 'Laporan',
-        addTxTitle: 'Catat Transaksi Cepat',
-        amountLabel: 'Nominal Transaksi',
-        txNameLabel: 'Nama / Catatan Transaksi',
-        categoryLabel: 'Kategori',
-        walletLabel: 'Pilih Dompet',
-        fromWalletLabel: 'Dari Dompet Asal',
-        toWalletLabel: 'Ke Dompet Tujuan',
-        dateLabel: 'Tanggal',
-        saveTxBtn: 'Simpan Transaksi',
-        addWalletTitle: 'Tambah Dompet Baru',
-        walletName: 'Nama Dompet',
-        initialBalance: 'Saldo Awal',
-        cardColor: 'Warna Kartu',
-        setDailySafeTitle: 'Atur Jatah Aman Harian',
-        totalBudgetLabel: 'Total Anggaran',
-        targetDaysLabel: 'Target Durasi (Hari)',
-        newGoalModalTitle: 'Target Nabung Baru',
-        goalName: 'Nama Target',
-        targetAmount: 'Nominal Target',
-        deadlineLabel: 'Tenggat Waktu',
-        topupGoalTitle: 'Top Up Target Nabung',
-        topupAmount: 'Nominal Top Up',
-        sourceWallet: 'Ambil dari Dompet',
-        confirmTopupBtn: 'Top Up Sekarang',
-        newDebtModalTitle: 'Catat Piutang Baru',
-        borrowerName: 'Nama Peminjam',
-        loanAmount: 'Nominal Pinjaman',
-        dueDateLabel: 'Tanggal Jatuh Tempo',
-        resetConfirmTitle: 'Reset Semua Data?',
-        resetConfirmDesc: 'Seluruh dompet, riwayat transaksi, target, dan piutang akan dihapus dan diatur ulang ke 0.',
-        cancelBtn: 'Batal',
-        yesResetBtn: 'Ya, Reset',
-        safeStatusGood: 'Aman',
-        safeStatusWarn: 'Hati-hati',
-        safeStatusOver: 'Overbudget',
-        targetDaysSub: 'Target {days} hari',
-        noTransactions: 'Belum ada transaksi',
-        noTransactionsDesc: 'Tap tombol + di bawah untuk mulai mencatat pemasukan atau pengeluaran pertama Anda.',
-        noGoals: 'Belum ada target nabung',
-        noGoalsDesc: 'Buat target tabungan impian Anda dan pantau progresnya di sini.',
-        noDebts: 'Belum ada catatan piutang',
-        noDebtsDesc: 'Catat uang yang dipinjam teman atau kerabat agar tidak lupa.',
-        noExpenseData: 'Belum ada pengeluaran bulan ini',
-        topupBtn: 'Top Up Target',
-        markPaidBtn: 'Tandai Lunas',
-        unpaidBadge: 'Belum Lunas',
-        paidBadge: 'Lunas',
-        collectedOf: 'Terkumpul {saved} dari {target}',
-        duePrefix: 'Jatuh Tempo:',
-        deadlinePrefix: 'Tenggat:',
-        toastTxSaved: 'Transaksi berhasil disimpan!',
-        toastTxDeleted: 'Transaksi dihapus & saldo dikembalikan.',
-        toastInvalidAmount: 'Masukkan nominal lebih dari 0!',
-        toastSameWallet: 'Dompet asal dan tujuan tidak boleh sama!',
-        toastWalletAdded: 'Dompet baru berhasil ditambahkan!',
-        toastBudgetUpdated: 'Jatah aman harian diperbarui!',
-        toastGoalAdded: 'Target nabung berhasil dibuat!',
-        toastGoalTopup: 'Top up target berhasil & saldo dompet terpotong!',
-        toastDebtAdded: 'Piutang dicatat & saldo dompet terpotong!',
-        toastDebtPaid: 'Piutang lunas! Saldo dikembalikan ke dompet.',
-        toastProfileSaved: 'Nama profil diperbarui!',
-        toastCsvExported: 'File CSV berhasil diunduh!',
-        toastJsonBackup: 'Backup JSON berhasil diunduh!',
-        toastJsonRestored: 'Data berhasil dipulihkan!',
-        toastJsonError: 'File JSON tidak valid!',
-        toastResetDone: 'Semua data telah direset ke 0!',
-        greetMorning: 'Selamat Pagi,',
-        greetAfternoon: 'Selamat Siang,',
-        greetEvening: 'Selamat Malam,',
-        catFood: 'Makan',
-        catTransport: 'Transport',
-        catShopping: 'Belanja',
-        catBills: 'Tagihan',
-        catEntertainment: 'Hiburan',
-        catHealth: 'Kesehatan',
-        catSalary: 'Gaji',
-        catOther: 'Lainnya'
+const STORAGE_KEY = 'sakupintar_data_v2';
+
+// Default State (Otomatis membuat Dompet Utama & Celengan Utama)
+const getDefaultState = () => ({
+    user: null, // { name, isGuest }
+    settings: {
+        darkMode: false,
+        privacyMode: false,
+        pin: null, // 4-digit string
+        autoSaveSurplus: true, // Auto-tabung sisa jatah harian kemarin
+        lastActiveDate: getTodayStr(),
+        lastBackupDate: null
     },
-    en: {
-        appTagline: 'Smart Personal Finance',
-        authHeadline: 'Manage Money Smarter',
-        authDescription: 'Track spending, stay within your daily budget, and reach your future goals in one place.',
-        namePlaceholder: 'Example: Amjad',
-        passwordPlaceholder: 'Enter your PIN or password',
-        authRequired: 'Enter your full name and PIN or password.',
-        txNamePlaceholder: 'Example: Lunch or Salary',
-        walletNamePlaceholder: 'Example: Bank or E-Wallet',
-        goalNamePlaceholder: 'Example: Emergency fund or Laptop',
-        borrowerPlaceholder: 'Example: Alex',
-        walletStartsAtZero: 'New wallets always start with a balance of 0.',
-        itemCount: 'items',
-        deleteTitle: 'Delete transaction',
-        toggleCalculator: 'Show or hide calculator',
-        showBalance: 'Show balances',
-        hideBalance: 'Hide balances',
-        switchCurrency: 'Switch currency',
-        switchLanguage: 'Switch language',
-        switchTheme: 'Switch appearance',
-        addTransaction: 'Add transaction',
-        lentWallet: 'Lent from wallet',
-        colorIndigo: 'Indigo Blue',
-        colorEmerald: 'Emerald Green',
-        colorAmber: 'Amber Orange',
-        colorRose: 'Rose Pink',
-        colorPurple: 'Royal Purple',
-        loginTab: 'Sign In',
-        registerTab: 'Register',
-        fullName: 'Full Name',
-        pinPassword: 'PIN / Password',
-        loginBtn: 'Sign In to Account',
-        registerBtn: 'Create Account',
-        orText: 'or',
-        guestBtn: 'Continue as Guest',
-        netWorth: 'Total Net Worth',
-        monthIncome: 'This Month Income',
-        monthExpense: 'This Month Expense',
-        myWallets: 'My Wallets',
-        addWallet: 'Add Wallet',
-        dailySafeTitle: 'Daily Safe-to-Spend',
-        setBtn: 'Configure',
-        remainingToday: 'Remaining Today',
-        spentToday: 'Spent:',
-        recentTransactions: 'Last 5 Transactions',
-        seeAll: 'See All',
-        historyTitle: 'Transaction History',
-        allMonths: 'All Months',
-        allTypes: 'All Types',
-        expense: 'Expense',
-        income: 'Income',
-        transfer: 'Transfer',
-        allWallets: 'All Wallets',
-        goalsDebtsTitle: 'Goals & Receivables',
-        savingGoalsTab: 'Saving Goals',
-        receivablesTab: 'Receivables',
-        newGoalBtn: '+ Create New Saving Goal',
-        newDebtBtn: '+ Record New Receivable',
-        reportAccountTitle: 'Reports & Account',
-        monthlySummary: 'Monthly Financial Summary',
-        totalIncome: 'Total Income',
-        totalExpense: 'Total Expense',
-        cashflowRatio: 'Cashflow Ratio',
-        expenseByCategory: 'Expense by Category',
-        accountSettings: 'Account Settings',
-        profileName: 'Profile Name',
-        saveBtn: 'Save',
-        currencyLabel: 'Primary Currency',
-        languageLabel: 'App Language',
-        dataManagement: 'Data Management',
-        exportCsvBtn: 'Export Report to CSV / Excel',
-        backupJsonBtn: 'Backup Data (Download JSON)',
-        restoreJsonBtn: 'Restore Data (Upload JSON)',
-        resetDataBtn: 'Reset All Data',
-        logoutBtn: 'Sign Out (Logout)',
-        navHome: 'Home',
-        navHistory: 'History',
-        navGoals: 'Goals',
-        navReport: 'Report',
-        addTxTitle: 'Quick Add Transaction',
-        amountLabel: 'Transaction Amount',
-        txNameLabel: 'Transaction Name / Note',
-        categoryLabel: 'Category',
-        walletLabel: 'Select Wallet',
-        fromWalletLabel: 'From Source Wallet',
-        toWalletLabel: 'To Destination Wallet',
-        dateLabel: 'Date',
-        saveTxBtn: 'Save Transaction',
-        addWalletTitle: 'Add New Wallet',
-        walletName: 'Wallet Name',
-        initialBalance: 'Initial Balance',
-        cardColor: 'Card Color',
-        setDailySafeTitle: 'Configure Daily Safe-to-Spend',
-        totalBudgetLabel: 'Total Budget',
-        targetDaysLabel: 'Target Duration (Days)',
-        newGoalModalTitle: 'New Saving Goal',
-        goalName: 'Goal Name',
-        targetAmount: 'Target Amount',
-        deadlineLabel: 'Deadline',
-        topupGoalTitle: 'Top Up Saving Goal',
-        topupAmount: 'Top Up Amount',
-        sourceWallet: 'Deduct from Wallet',
-        confirmTopupBtn: 'Top Up Now',
-        newDebtModalTitle: 'Record New Receivable',
-        borrowerName: 'Borrower Name',
-        loanAmount: 'Loan Amount',
-        dueDateLabel: 'Due Date',
-        resetConfirmTitle: 'Reset All Data?',
-        resetConfirmDesc: 'All wallets, transactions, goals, and receivables will be cleared and reset to 0.',
-        cancelBtn: 'Cancel',
-        yesResetBtn: 'Yes, Reset',
-        safeStatusGood: 'Safe',
-        safeStatusWarn: 'Caution',
-        safeStatusOver: 'Overbudget',
-        targetDaysSub: '{days}-day target',
-        noTransactions: 'No transactions yet',
-        noTransactionsDesc: 'Tap the + button below to record your first income or expense.',
-        noGoals: 'No saving goals yet',
-        noGoalsDesc: 'Create your dream savings target and track progress here.',
-        noDebts: 'No receivables recorded',
-        noDebtsDesc: 'Keep track of money lent to friends or family so you never forget.',
-        noExpenseData: 'No expenses recorded this month',
-        topupBtn: 'Top Up Goal',
-        markPaidBtn: 'Mark as Paid',
-        unpaidBadge: 'Unpaid',
-        paidBadge: 'Paid',
-        collectedOf: 'Saved {saved} of {target}',
-        duePrefix: 'Due:',
-        deadlinePrefix: 'Deadline:',
-        toastTxSaved: 'Transaction saved successfully!',
-        toastTxDeleted: 'Transaction deleted & balance restored.',
-        toastInvalidAmount: 'Please enter an amount greater than 0!',
-        toastSameWallet: 'Source and destination wallets cannot be the same!',
-        toastWalletAdded: 'New wallet added!',
-        toastBudgetUpdated: 'Daily safe budget updated!',
-        toastGoalAdded: 'Saving goal created!',
-        toastGoalTopup: 'Goal topped up & wallet balance updated!',
-        toastDebtAdded: 'Receivable recorded & wallet balance deducted!',
-        toastDebtPaid: 'Receivable settled! Balance returned to wallet.',
-        toastProfileSaved: 'Profile name updated!',
-        toastCsvExported: 'CSV report downloaded!',
-        toastJsonBackup: 'JSON backup downloaded!',
-        toastJsonRestored: 'Data restored successfully!',
-        toastJsonError: 'Invalid JSON file!',
-        toastResetDone: 'All data has been reset to 0!',
-        greetMorning: 'Good Morning,',
-        greetAfternoon: 'Good Afternoon,',
-        greetEvening: 'Good Evening,',
-        catFood: 'Food',
-        catTransport: 'Transport',
-        catShopping: 'Shopping',
-        catBills: 'Bills',
-        catEntertainment: 'Leisure',
-        catHealth: 'Health',
-        catSalary: 'Salary',
-        catOther: 'Other'
-    }
-};
+    wallets: [
+        {
+            id: 'wallet_main',
+            name: 'Dompet Utama',
+            balance: 0,
+            color: 'from-slate-800 to-slate-950',
+            isMain: true
+        }
+    ],
+    mainPiggyBank: 0, // Celengan Utama bawaan
+    specificGoals: [], // Opsional: { id, name, target, saved, deadline }
+    transactions: [], // { id, type, amount, walletId, toWalletId, category, note, date, timestamp }
+    receivables: [], // { id, friendName, amount, note, walletId, date, paid }
+    recurring: [], // { id, type, title, amount, frequency, nextDate, walletId }
+    templates: [
+        { id: 'tpl_1', label: 'Parkir', amount: 2000, category: 'Transportasi' },
+        { id: 'tpl_2', label: 'Makan', amount: 15000, category: 'Makan & Minum' },
+        { id: 'tpl_3', label: 'Kopi', amount: 18000, category: 'Makan & Minum' },
+        { id: 'tpl_4', label: 'Bensin', amount: 25000, category: 'Transportasi' }
+    ]
+});
 
-const CATEGORIES = [
-    { id: 'food', icon: 'utensils', color: 'bg-orange-100 text-orange-600 dark:bg-orange-950 dark:text-orange-400', labelKey: 'catFood' },
-    { id: 'transport', icon: 'car', color: 'bg-blue-100 text-blue-600 dark:bg-blue-950 dark:text-blue-400', labelKey: 'catTransport' },
-    { id: 'shopping', icon: 'shopping-bag', color: 'bg-pink-100 text-pink-600 dark:bg-pink-950 dark:text-pink-400', labelKey: 'catShopping' },
-    { id: 'bills', icon: 'zap', color: 'bg-amber-100 text-amber-600 dark:bg-amber-950 dark:text-amber-400', labelKey: 'catBills' },
-    { id: 'entertainment', icon: 'gamepad-2', color: 'bg-purple-100 text-purple-600 dark:bg-purple-950 dark:text-purple-400', labelKey: 'catEntertainment' },
-    { id: 'health', icon: 'heart-pulse', color: 'bg-rose-100 text-rose-600 dark:bg-rose-950 dark:text-rose-400', labelKey: 'catHealth' },
-    { id: 'salary', icon: 'briefcase', color: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400', labelKey: 'catSalary' },
-    { id: 'other', icon: 'layers', color: 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300', labelKey: 'catOther' }
-];
+let state = loadState();
 
-// ==================== INITIAL ZERO STATE ====================
-function getDefaultData() {
-    return {
-        isLoggedIn: false,
-        user: { name: 'User', isGuest: false },
-        settings: {
-            lang: 'id',
-            currency: 'IDR',
-            theme: 'light',
-            hideBalance: false
-        },
-        safeBudget: {
-            totalBudgetIDR: 1400000,
-            days: 14
-        },
-        wallets: [
-            { id: 'w1', name: 'Bank Utama', balanceIDR: 0, color: 'from-indigo-600 to-blue-600', icon: 'landmark' },
-            { id: 'w2', name: 'E-Wallet', balanceIDR: 0, color: 'from-emerald-500 to-teal-600', icon: 'smartphone' },
-            { id: 'w3', name: 'Tunai', balanceIDR: 0, color: 'from-amber-500 to-orange-600', icon: 'banknote' }
-        ],
-        transactions: [],
-        goals: [],
-        debts: []
-    };
-}
-
-let appState = loadState();
-let currentAuthTab = 'login';
-let currentPage = 'home';
+// Variabel sementara untuk modal transaksi & PIN
 let currentTxType = 'expense';
-let selectedCategory = 'food';
-let calcExpression = '0';
+let calcBuffer = '0';
+let selectedPiggyPct = 0;
+let selectedWalletColor = 'from-slate-800 to-slate-950';
+let pinInputBuffer = '';
+let isSettingNewPin = false;
 
-function loadState() {
-    try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (!raw) {
-            const def = getDefaultData();
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(def));
-            return def;
-        }
-        const state = JSON.parse(raw);
-        if (state.user && Object.prototype.hasOwnProperty.call(state.user, 'email')) {
-            delete state.user.email;
-        }
-        return state;
-    } catch (e) {
-        return getDefaultData();
+/* ==================== HELPER UTILITIES ==================== */
+function getTodayStr() {
+    const d = new Date();
+    return d.toISOString().split('T')[0];
+}
+
+function getCurrentMonthStr() {
+    return getTodayStr().slice(0, 7);
+}
+
+function formatRupiah(num, forceShow = false) {
+    if (state.settings.privacyMode && !forceShow) {
+        return 'Rp ••••••';
     }
+    const val = Math.round(Number(num) || 0);
+    return 'Rp ' + val.toLocaleString('id-ID');
 }
 
-function saveState() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
-}
-
-// ==================== CURRENCY & FORMATTING ====================
-function t(key) {
-    return I18N[appState.settings.lang][key] || key;
-}
-
-function formatMoney(amountIDR, forceShow = false) {
-    if (appState.settings.hideBalance && !forceShow) {
-        return '••••••';
-    }
-    const cur = appState.settings.currency;
-    if (cur === 'USD') {
-        const usd = amountIDR / USD_RATE;
-        return new Intl.NumberFormat('en-US', {
-            style: 'currency',
-            currency: 'USD',
-            minimumFractionDigits: usd % 1 === 0 ? 0 : 2,
-            maximumFractionDigits: 2
-        }).format(usd);
-    } else {
-        return 'Rp ' + new Intl.NumberFormat('id-ID', {
-            maximumFractionDigits: 0
-        }).format(Math.round(amountIDR));
-    }
-}
-
-function inputToIDR(inputVal) {
-    const num = parseFloat(inputVal) || 0;
-    return appState.settings.currency === 'USD' ? num * USD_RATE : num;
-}
-
-function idrToInput(amountIDR) {
-    if (appState.settings.currency === 'USD') {
-        return Number((amountIDR / USD_RATE).toFixed(2));
-    }
-    return Math.round(amountIDR);
-}
-
-function showToast(msg, type = 'success') {
+function showToast(msg, type = 'info') {
     const container = document.getElementById('toast-container');
     const el = document.createElement('div');
-    const bg = type === 'error' ? 'bg-rose-600' : 'bg-slate-900 dark:bg-indigo-600';
-    el.className = `${bg} text-white px-4 py-3 rounded-2xl shadow-xl text-xs font-bold flex items-center justify-between animate-slide-up`;
-    el.innerHTML = `<span>${msg}</span>`;
+    const bg =
+        type === 'success'
+            ? 'bg-emerald-600 text-white'
+            : type === 'error'
+                ? 'bg-rose-600 text-white'
+                : 'bg-slate-900 text-yellow-400 border border-slate-700';
+    el.className = `${bg} px-4 py-2.5 rounded-xl text-xs font-bold shadow-xl text-center transition-all duration-300`;
+    el.textContent = msg;
     container.appendChild(el);
     setTimeout(() => {
         el.style.opacity = '0';
-        el.style.transition = 'opacity 0.3s';
         setTimeout(() => el.remove(), 300);
     }, 2600);
 }
 
-// ==================== THEME, LANGUAGE & CURRENCY TOGGLES ====================
+function loadState() {
+    try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return getDefaultState();
+        const parsed = JSON.parse(raw);
+        return { ...getDefaultState(), ...parsed };
+    } catch (e) {
+        return getDefaultState();
+    }
+}
+
+function saveState() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+/* ==================== AUTO-ENGINE: GANTI HARI & RECURRING ==================== */
+function runDailyAutomation() {
+    const today = getTodayStr();
+    const lastDate = state.settings.lastActiveDate;
+
+    // 1. Auto-Tabung Sisa Jatah Harian Kemarin jika berganti tanggal
+    if (lastDate && lastDate !== today && state.settings.autoSaveSurplus) {
+        const mainWallet = state.wallets.find((w) => w.isMain) || state.wallets[0];
+        if (mainWallet && mainWallet.balance > 0) {
+            // Hitung jatah kemarin berdasarkan sisa hari bulan pada tanggal kemarin
+            const prevDateObj = new Date(lastDate);
+            const daysInPrevMonth = new Date(prevDateObj.getFullYear(), prevDateObj.getMonth() + 1, 0).getDate();
+            const remainingDaysPrev = Math.max(1, daysInPrevMonth - prevDateObj.getDate() + 1);
+
+            const spentYesterday = state.transactions
+                .filter((t) => t.type === 'expense' && t.walletId === mainWallet.id && t.date === lastDate)
+                .reduce((acc, t) => acc + t.amount, 0);
+
+            const balanceStartYesterday = mainWallet.balance + spentYesterday;
+            const quotaYesterday = Math.floor(balanceStartYesterday / remainingDaysPrev);
+            const surplus = quotaYesterday - spentYesterday;
+
+            if (surplus > 0 && mainWallet.balance >= surplus) {
+                mainWallet.balance -= surplus;
+                state.mainPiggyBank += surplus;
+                state.transactions.unshift({
+                    id: 'tx_auto_' + Date.now(),
+                    type: 'transfer',
+                    amount: surplus,
+                    walletId: mainWallet.id,
+                    toWalletId: 'piggy_main',
+                    category: 'Auto-Tabung Sisa Jatah',
+                    note: `Sisa jatah tanggal ${lastDate} masuk Celengan Utama`,
+                    date: today,
+                    timestamp: Date.now()
+                });
+                showToast(`🐷 Auto-Tabung: ${formatRupiah(surplus, true)} sisa jatah masuk Celengan!`, 'success');
+            }
+        }
+    }
+
+    state.settings.lastActiveDate = today;
+
+    // 2. Eksekusi Transaksi Berulang (Auto-Recurring) yang jatuh tempo
+    let executedCount = 0;
+    state.recurring.forEach((item) => {
+        while (item.nextDate <= today) {
+            const targetWallet = state.wallets.find((w) => w.id === item.walletId) || state.wallets[0];
+            if (targetWallet) {
+                if (item.type === 'income') {
+                    targetWallet.balance += item.amount;
+                } else {
+                    targetWallet.balance = Math.max(0, targetWallet.balance - item.amount);
+                }
+                state.transactions.unshift({
+                    id: 'tx_rec_' + Date.now() + Math.random().toString(36).slice(2, 6),
+                    type: item.type,
+                    amount: item.amount,
+                    walletId: targetWallet.id,
+                    category: item.type === 'income' ? 'Pemasukan Rutin' : 'Tagihan & Kuota',
+                    note: `[Otomatis] ${item.title}`,
+                    date: item.nextDate,
+                    timestamp: Date.now()
+                });
+                executedCount++;
+            }
+            // Majukan tanggal jatuh tempo berikutnya
+            item.nextDate = advanceDate(item.nextDate, item.frequency);
+        }
+    });
+
+    if (executedCount > 0) {
+        showToast(`⚡ ${executedCount} transaksi berulang otomatis dicatat!`, 'info');
+    }
+
+    saveState();
+}
+
+function advanceDate(dateStr, freq) {
+    const d = new Date(dateStr);
+    if (freq === 'daily') d.setDate(d.getDate() + 1);
+    else if (freq === 'weekly') d.setDate(d.getDate() + 7);
+    else d.setMonth(d.getMonth() + 1);
+    return d.toISOString().split('T')[0];
+}
+
+/* ==================== JATAH AMAN HARIAN OTOMATIS ==================== */
+function calculateSafeDailyAllowance() {
+    const mainWallet = state.wallets.find((w) => w.isMain) || state.wallets[0];
+    const currentBalance = mainWallet ? mainWallet.balance : 0;
+
+    const now = new Date();
+    const todayStr = getTodayStr();
+    const totalDaysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const remainingDays = Math.max(1, totalDaysInMonth - now.getDate() + 1);
+
+    // Pengeluaran dari Dompet Utama hari ini
+    const spentToday = state.transactions
+        .filter((t) => t.type === 'expense' && t.walletId === mainWallet.id && t.date === todayStr)
+        .reduce((sum, t) => sum + t.amount, 0);
+
+    // Saldo Dompet Utama di awal hari ini = Saldo sekarang + Pengeluaran hari ini
+    const startOfDayBalance = currentBalance + spentToday;
+    const initialDailyQuota = Math.max(0, Math.floor(startOfDayBalance / remainingDays));
+    const remainingToday = initialDailyQuota - spentToday;
+
+    let pct = 100;
+    if (initialDailyQuota > 0) {
+        pct = Math.max(0, Math.min(100, Math.round((remainingToday / initialDailyQuota) * 100)));
+    } else if (spentToday > 0) {
+        pct = 0;
+    }
+
+    // Status Warna: Hijau (Aman), Kuning (< 30%), Merah (Melewati jatah)
+    let status = 'safe';
+    if (remainingToday < 0 || (initialDailyQuota === 0 && spentToday > 0)) {
+        status = 'danger';
+    } else if (pct < 30) {
+        status = 'warning';
+    }
+
+    return {
+        initialDailyQuota,
+        remainingToday,
+        spentToday,
+        remainingDays,
+        pct,
+        status
+    };
+}
+
+/* ==================== RENDERING UI ==================== */
 function applyTheme() {
-    const html = document.documentElement;
-    if (appState.settings.theme === 'dark') {
-        html.classList.add('dark');
+    if (state.settings.darkMode) {
+        document.documentElement.classList.add('dark');
+        document.getElementById('btn-toggle-theme').textContent = '☀️';
     } else {
-        html.classList.remove('dark');
+        document.documentElement.classList.remove('dark');
+        document.getElementById('btn-toggle-theme').textContent = '🌙';
     }
 }
 
-function toggleTheme() {
-    appState.settings.theme = appState.settings.theme === 'dark' ? 'light' : 'dark';
-    saveState();
+function renderAll() {
     applyTheme();
-    lucide.createIcons();
-}
-
-function toggleLanguage() {
-    setLanguage(appState.settings.lang === 'id' ? 'en' : 'id');
-}
-
-function setLanguage(lang) {
-    appState.settings.lang = lang;
-    document.documentElement.lang = lang;
-    saveState();
-    applyTranslations();
-    renderAll();
-}
-
-function toggleCurrency() {
-    setCurrency(appState.settings.currency === 'IDR' ? 'USD' : 'IDR');
-}
-
-function setCurrency(cur) {
-    appState.settings.currency = cur;
-    saveState();
-    renderAll();
-}
-
-function toggleHideBalance() {
-    appState.settings.hideBalance = !appState.settings.hideBalance;
-    saveState();
-    renderHome();
-}
-
-function applyTranslations() {
-    document.documentElement.lang = appState.settings.lang;
-    document.querySelectorAll('[data-i18n]').forEach(el => {
-        const key = el.getAttribute('data-i18n');
-        el.textContent = t(key);
-    });
-    const authSubmitBtn = document.getElementById('auth-submit-btn');
-    if (authSubmitBtn) {
-        authSubmitBtn.textContent = t(currentAuthTab === 'login' ? 'loginBtn' : 'registerBtn');
-    }
-    document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
-        el.placeholder = t(el.getAttribute('data-i18n-placeholder'));
-    });
-    document.querySelectorAll('[data-i18n-title]').forEach(el => {
-        el.title = t(el.getAttribute('data-i18n-title'));
-    });
-    document.querySelectorAll('[data-i18n-aria-label]').forEach(el => {
-        el.setAttribute('aria-label', t(el.getAttribute('data-i18n-aria-label')));
-    });
-    const searchEl = document.getElementById('history-search');
-    if (searchEl) {
-        searchEl.placeholder = appState.settings.lang === 'id' ? 'Cari nama transaksi...' : 'Search transaction name...';
-    }
-    const authLangLabel = document.getElementById('auth-lang-label');
-    if (authLangLabel) authLangLabel.textContent = appState.settings.lang.toUpperCase();
-    const headerLangBadge = document.getElementById('header-lang-badge');
-    if (headerLangBadge) headerLangBadge.textContent = appState.settings.lang.toUpperCase();
-    const settingsLangSelect = document.getElementById('settings-lang-select');
-    if (settingsLangSelect) settingsLangSelect.value = appState.settings.lang;
-}
-
-// ==================== AUTHENTICATION ====================
-function switchAuthTab(tab) {
-    currentAuthTab = tab;
-    const loginBtn = document.getElementById('tab-login-btn');
-    const regBtn = document.getElementById('tab-register-btn');
-    const submitBtn = document.getElementById('auth-submit-btn');
-    const isLogin = tab === 'login';
-    loginBtn.classList.toggle('is-active', isLogin);
-    regBtn.classList.toggle('is-active', !isLogin);
-    loginBtn.setAttribute('aria-selected', String(isLogin));
-    regBtn.setAttribute('aria-selected', String(!isLogin));
-    document.getElementById('auth-pass').autocomplete = isLogin ? 'current-password' : 'new-password';
-    submitBtn.textContent = t(isLogin ? 'loginBtn' : 'registerBtn');
-}
-
-function handleAuthSubmit(e) {
-    e.preventDefault();
-    const name = document.getElementById('auth-name').value.trim();
-    const passInput = document.getElementById('auth-pass');
-    const pin = passInput.value.trim();
-
-    if (!name || !pin) {
-        showToast(t('authRequired'), 'error');
+    if (!state.user) {
+        document.getElementById('auth-screen').classList.remove('hidden');
+        document.getElementById('app-shell').classList.add('hidden');
         return;
     }
 
-    passInput.value = '';
-    appState.isLoggedIn = true;
-    appState.user = {
-        name,
-        isGuest: false
-    };
-    saveState();
-    checkAuth();
-}
+    document.getElementById('auth-screen').classList.add('hidden');
+    document.getElementById('app-shell').classList.remove('hidden');
 
-function loginAsGuest() {
-    document.getElementById('auth-pass').value = '';
-    appState.isLoggedIn = true;
-    appState.user = {
-        name: 'User',
-        isGuest: true
-    };
-    saveState();
-    checkAuth();
-}
-
-function logout() {
-    document.getElementById('auth-pass').value = '';
-    appState.isLoggedIn = false;
-    saveState();
-    checkAuth();
-}
-
-function checkAuth() {
-    const authScreen = document.getElementById('auth-screen');
-    const mainApp = document.getElementById('main-app');
-    if (appState.isLoggedIn) {
-        authScreen.classList.add('hidden');
-        mainApp.classList.remove('hidden');
-        renderAll();
-    } else {
-        authScreen.classList.remove('hidden');
-        mainApp.classList.add('hidden');
-    }
-    lucide.createIcons();
-}
-
-// ==================== NAVIGATION ====================
-function navigateTo(page) {
-    currentPage = page;
-    document.querySelectorAll('.page-section').forEach(sec => sec.classList.add('hidden'));
-    document.getElementById(`page-${page}`).classList.remove('hidden');
-
-    document.querySelectorAll('.nav-item').forEach(btn => {
-        btn.classList.remove('text-indigo-600', 'dark:text-indigo-400');
-        btn.classList.add('text-slate-400');
+    // Header Greeting
+    const now = new Date();
+    document.getElementById('greeting-date').textContent = now.toLocaleDateString('id-ID', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric'
     });
-    const activeNav = document.getElementById(`nav-${page}`);
-    if (activeNav) {
-        activeNav.classList.remove('text-slate-400');
-        activeNav.classList.add('text-indigo-600', 'dark:text-indigo-400');
-    }
+    document.getElementById('user-greeting').textContent = `Halo, ${state.user.name} 👋`;
+    document.getElementById('btn-toggle-privacy').textContent = state.settings.privacyMode ? '🙈' : '👁️';
 
-    if (page === 'home') renderHome();
-    if (page === 'history') renderHistory();
-    if (page === 'goals') renderGoalsAndDebts();
-    if (page === 'report') renderReport();
-    lucide.createIcons();
+    renderHomeDashboard();
+    renderSavingsView();
+    renderHistoryView();
+    renderReportsView();
+    populateWalletSelects();
 }
 
-// ==================== RENDERING: HOME ====================
-function getGreeting() {
-    const hr = new Date().getHours();
-    if (hr < 12) return t('greetMorning');
-    if (hr < 18) return t('greetAfternoon');
-    return t('greetEvening');
-}
-
-function renderHome() {
-    // Header User & Badges
-    const userName = appState.user.name || 'User';
-    document.getElementById('greeting-text').textContent = getGreeting();
-    document.getElementById('header-username').textContent = userName;
-    document.getElementById('header-avatar').textContent = userName.charAt(0).toUpperCase();
-    document.getElementById('header-currency-badge').textContent = appState.settings.currency === 'IDR' ? 'IDR (Rp)' : 'USD ($)';
-    document.getElementById('header-lang-badge').textContent = appState.settings.lang.toUpperCase();
-
-    // Hide/Show eye icon
-    const showIcon = document.getElementById('eye-icon-show');
-    const hideIcon = document.getElementById('eye-icon-hide');
-    if (appState.settings.hideBalance) {
-        showIcon.classList.add('hidden');
-        hideIcon.classList.remove('hidden');
-    } else {
-        showIcon.classList.remove('hidden');
-        hideIcon.classList.add('hidden');
-    }
-    document.querySelector('[onclick="toggleHideBalance()"]')
-        .setAttribute('aria-label', t(appState.settings.hideBalance ? 'showBalance' : 'hideBalance'));
-
+function renderHomeDashboard() {
     // Net Worth
-    const netWorth = appState.wallets.reduce((sum, w) => sum + w.balanceIDR, 0);
-    document.getElementById('net-worth-amount').textContent = formatMoney(netWorth);
+    const walletsTotal = state.wallets.reduce((sum, w) => sum + w.balance, 0);
+    const goalsTotal = state.specificGoals.reduce((sum, g) => sum + g.saved, 0);
+    const savingsTotal = state.mainPiggyBank + goalsTotal;
+    const netWorth = walletsTotal + savingsTotal;
 
-    // Current Month Income & Expense
-    const currentYM = new Date().toISOString().slice(0, 7);
-    let monthInc = 0;
-    let monthExp = 0;
-    appState.transactions.forEach(tx => {
-        if (tx.date.startsWith(currentYM)) {
-            if (tx.type === 'income') monthInc += tx.amountIDR;
-            if (tx.type === 'expense') monthExp += tx.amountIDR;
-        }
-    });
-    document.getElementById('home-month-income').textContent = formatMoney(monthInc);
-    document.getElementById('home-month-expense').textContent = formatMoney(monthExp);
+    document.getElementById('net-worth-display').textContent = formatRupiah(netWorth);
+    document.getElementById('total-wallets-display').textContent = formatRupiah(walletsTotal);
+    document.getElementById('total-savings-display').textContent = formatRupiah(savingsTotal);
+    document.getElementById('active-wallets-count').textContent = `${state.wallets.length} Dompet + Celengan`;
 
-    // Wallets Horizontal Cards
+    // Jatah Aman Harian
+    const quota = calculateSafeDailyAllowance();
+    const remEl = document.getElementById('daily-remaining-amount');
+    const barEl = document.getElementById('daily-progress-bar');
+    const badgeEl = document.getElementById('daily-status-badge');
+
+    remEl.textContent = formatRupiah(quota.remainingToday);
+    document.getElementById('daily-initial-quota').textContent = `dari ${formatRupiah(quota.initialDailyQuota)} / hari`;
+    document.getElementById('daily-spent-today').textContent = formatRupiah(quota.spentToday);
+    document.getElementById('days-left-label').textContent = `Sisa ${quota.remainingDays} hari bulan ini`;
+    barEl.style.width = `${quota.pct}%`;
+
+    // Reset & set warna dinamis
+    remEl.className = 'text-base font-extrabold';
+    barEl.className = 'h-full transition-all duration-300 rounded-full';
+    badgeEl.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full';
+
+    if (quota.status === 'safe') {
+        remEl.classList.add('text-emerald-600', 'dark:text-emerald-400');
+        barEl.classList.add('bg-emerald-500');
+        badgeEl.classList.add('bg-emerald-100', 'text-emerald-700', 'dark:bg-emerald-950', 'dark:text-emerald-400');
+        badgeEl.textContent = 'Aman';
+    } else if (quota.status === 'warning') {
+        remEl.classList.add('text-amber-500');
+        barEl.classList.add('bg-amber-400');
+        badgeEl.classList.add('bg-amber-100', 'text-amber-700', 'dark:bg-amber-950', 'dark:text-amber-400');
+        badgeEl.textContent = 'Menipis (<30%)';
+    } else {
+        remEl.classList.add('text-rose-600', 'dark:text-rose-400');
+        barEl.classList.add('bg-rose-500');
+        badgeEl.classList.add('bg-rose-100', 'text-rose-700', 'dark:bg-rose-950', 'dark:text-rose-400');
+        badgeEl.textContent = 'Melewati Jatah!';
+    }
+
+    // Wallets Carousel
     const carousel = document.getElementById('wallets-carousel');
-    carousel.innerHTML = appState.wallets.map(w => `
-    <div class="min-w-[155px] bg-gradient-to-br ${w.color} text-white p-4 rounded-2xl shadow-md flex flex-col justify-between shrink-0">
-      <div class="flex items-center justify-between mb-3">
-        <div class="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center">
-          <i data-lucide="${w.icon || 'wallet'}" class="w-4 h-4"></i>
+    carousel.innerHTML = state.wallets
+        .map(
+            (w) => `
+      <div class="min-w-[155px] rounded-2xl bg-gradient-to-br ${w.color} text-white p-3.5 shadow-md flex flex-col justify-between shrink-0">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-xs font-bold truncate max-w-[100px]">${w.name}</span>
+          ${w.isMain ? '<span class="text-[9px] px-1.5 py-0.5 rounded bg-yellow-400 text-slate-950 font-extrabold">UTAMA</span>' : ''}
         </div>
-        <span class="text-[10px] font-bold uppercase tracking-wider bg-white/15 px-2 py-0.5 rounded-full">${appState.settings.currency}</span>
+        <div>
+          <span class="text-[10px] text-white/70 block">Saldo</span>
+          <strong class="text-sm font-extrabold tracking-tight">${formatRupiah(w.balance)}</strong>
+        </div>
       </div>
-      <div>
-        <p class="text-xs text-white/80 font-medium truncate">${w.name}</p>
-        <p class="text-sm font-extrabold mt-0.5">${formatMoney(w.balanceIDR)}</p>
-      </div>
-    </div>
-  `).join('');
+    `
+        )
+        .join('');
 
-    // Daily Safe-to-Spend Hero Widget
-    const todayStr = new Date().toISOString().slice(0, 10);
-    const dailyLimitIDR = appState.safeBudget.totalBudgetIDR / (appState.safeBudget.days || 1);
-    const spentTodayIDR = appState.transactions
-        .filter(tx => tx.type === 'expense' && tx.date === todayStr)
-        .reduce((sum, tx) => sum + tx.amountIDR, 0);
+    // Smart Insights
+    renderSmartInsights();
 
-    const remainingTodayIDR = Math.max(0, dailyLimitIDR - spentTodayIDR);
-    const pct = dailyLimitIDR > 0 ? (spentTodayIDR / dailyLimitIDR) * 100 : 0;
-
-    document.getElementById('daily-safe-subtitle').textContent = t('targetDaysSub').replace('{days}', appState.safeBudget.days);
-    document.getElementById('daily-safe-remaining').textContent = formatMoney(remainingTodayIDR);
-    document.getElementById('daily-safe-spent').textContent = formatMoney(spentTodayIDR);
-    document.getElementById('daily-safe-limit').textContent = formatMoney(dailyLimitIDR);
-
-    const barEl = document.getElementById('daily-safe-bar');
-    const badgeEl = document.getElementById('daily-safe-badge');
-    barEl.style.width = `${Math.min(100, pct)}%`;
-
-    if (pct >= 100) {
-        barEl.className = 'h-full bg-rose-500 rounded-full transition-all duration-500';
-        badgeEl.className = 'inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-400';
-        badgeEl.textContent = t('safeStatusOver');
-    } else if (pct >= 75) {
-        barEl.className = 'h-full bg-amber-500 rounded-full transition-all duration-500';
-        badgeEl.className = 'inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400';
-        badgeEl.textContent = t('safeStatusWarn');
+    // Receivables (Piutang Patungan)
+    const unpaidReceivables = state.receivables.filter((r) => !r.paid);
+    const recSection = document.getElementById('home-receivables-section');
+    if (unpaidReceivables.length > 0) {
+        recSection.classList.remove('hidden');
+        const totalRec = unpaidReceivables.reduce((s, r) => s + r.amount, 0);
+        document.getElementById('total-receivables-badge').textContent = formatRupiah(totalRec);
+        document.getElementById('home-receivables-list').innerHTML = unpaidReceivables
+            .map(
+                (r) => `
+        <div class="flex items-center justify-between p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+          <div>
+            <p class="text-xs font-extrabold">${r.friendName} <span class="font-normal text-slate-400">(${r.note || 'Patungan'})</span></p>
+            <p class="text-xs font-bold text-amber-600 dark:text-yellow-400">${formatRupiah(r.amount)}</p>
+          </div>
+          <button type="button" onclick="markReceivablePaid('${r.id}')" class="px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-extrabold shadow-xs">
+            ✓ Lunas
+          </button>
+        </div>
+      `
+            )
+            .join('');
     } else {
-        barEl.className = 'h-full bg-emerald-500 rounded-full transition-all duration-500';
-        badgeEl.className = 'inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400';
-        badgeEl.textContent = t('safeStatusGood');
+        recSection.classList.add('hidden');
     }
 
-    // Recent 5 Transactions
-    const recentList = document.getElementById('home-recent-list');
-    const sorted = [...appState.transactions].sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id)).slice(0, 5);
-
-    if (sorted.length === 0) {
-        recentList.innerHTML = renderEmptyState('receipt-text', t('noTransactions'), t('noTransactionsDesc'));
-    } else {
-        recentList.innerHTML = sorted.map(tx => renderTransactionCard(tx, false)).join('');
-    }
+    // Recent Transactions (Max 5)
+    const recentList = document.getElementById('recent-transactions-list');
+    const recentTxs = state.transactions.slice(0, 5);
+    recentList.innerHTML = recentTxs.length
+        ? recentTxs.map((tx) => renderTransactionItem(tx)).join('')
+        : `<div class="text-center py-6 text-xs text-slate-400 bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800">Belum ada transaksi. Tekan tombol <strong>+</strong> di bawah untuk mulai!</div>`;
 }
 
-function renderEmptyState(icon, title, desc) {
-    return `
-    <div class="bg-white dark:bg-slate-900 rounded-3xl p-7 text-center border border-dashed border-slate-300 dark:border-slate-800">
-      <div class="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-400 mx-auto flex items-center justify-center mb-3">
-        <i data-lucide="${icon}" class="w-6 h-6"></i>
-      </div>
-      <h4 class="font-bold text-sm text-slate-700 dark:text-slate-200">${title}</h4>
-      <p class="text-xs text-slate-400 mt-1 max-w-[240px] mx-auto leading-relaxed">${desc}</p>
-    </div>
-  `;
-}
-
-function getWalletName(id) {
-    const w = appState.wallets.find(item => item.id === id);
-    return w ? w.name : t('walletLabel');
-}
-
-function renderTransactionCard(tx, allowDelete = true) {
-    const cat = CATEGORIES.find(c => c.id === tx.category) || CATEGORIES[7];
-    let sign = '-';
-    let amountColor = 'text-rose-600 dark:text-rose-400';
-    let iconHtml = `<i data-lucide="${cat.icon}" class="w-4 h-4"></i>`;
-    let iconBg = cat.color;
-    let subtitle = `${getWalletName(tx.walletId)} • ${tx.date}`;
-
-    if (tx.type === 'income') {
-        sign = '+';
-        amountColor = 'text-emerald-600 dark:text-emerald-400';
-    } else if (tx.type === 'transfer') {
-        sign = '⇄';
-        amountColor = 'text-indigo-600 dark:text-indigo-400';
-        iconHtml = `<i data-lucide="arrow-left-right" class="w-4 h-4"></i>`;
-        iconBg = 'bg-indigo-100 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-400';
-        subtitle = `${getWalletName(tx.walletId)} → ${getWalletName(tx.toWalletId)}`;
-    }
+function renderTransactionItem(tx) {
+    const wallet = state.wallets.find((w) => w.id === tx.walletId);
+    const walletName = wallet ? wallet.name : 'Dompet';
+    const isExpense = tx.type === 'expense';
+    const isIncome = tx.type === 'income';
+    const sign = isExpense ? '-' : isIncome ? '+' : '⇄';
+    const amountColor = isExpense
+        ? 'text-rose-600 dark:text-rose-400'
+        : isIncome
+            ? 'text-emerald-600 dark:text-emerald-400'
+            : 'text-blue-600 dark:text-blue-400';
 
     return `
-    <div class="bg-white dark:bg-slate-900 p-3.5 rounded-2xl border border-slate-200/60 dark:border-slate-800 flex items-center justify-between gap-3 shadow-sm">
+    <div class="flex items-center justify-between p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800">
       <div class="flex items-center gap-3 min-w-0">
-        <div class="w-10 h-10 rounded-xl ${iconBg} flex items-center justify-center shrink-0">
-          ${iconHtml}
+        <div class="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-sm shrink-0">
+          ${isExpense ? '💸' : isIncome ? '💰' : '🔄'}
         </div>
         <div class="min-w-0">
-          <p class="font-bold text-xs sm:text-sm text-slate-800 dark:text-slate-100 truncate">${tx.name}</p>
-          <p class="text-[11px] text-slate-400 truncate">${subtitle}</p>
+          <p class="text-xs font-extrabold truncate">${tx.note || tx.category}</p>
+          <p class="text-[10px] text-slate-400">${tx.category} • ${walletName} • ${tx.date}</p>
         </div>
       </div>
-      <div class="flex items-center gap-2 shrink-0">
-        <span class="font-extrabold text-xs sm:text-sm ${amountColor}">${sign} ${formatMoney(tx.amountIDR)}</span>
-        ${allowDelete ? `
-          <button onclick="deleteTransaction('${tx.id}')" class="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition" title="${t('deleteTitle')}">
-            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-          </button>
-        ` : ''}
-      </div>
+      <span class="text-xs font-extrabold ${amountColor} shrink-0 ml-2">${sign} ${formatRupiah(tx.amount)}</span>
     </div>
   `;
 }
 
-// ==================== TRANSACTION MODAL & CALCULATOR ====================
-function openTransactionModal() {
-    calcExpression = '0';
-    document.getElementById('tx-amount-display').value = '0';
-    document.getElementById('calc-expression-preview').textContent = '';
-    document.getElementById('tx-name').value = '';
-    document.getElementById('tx-date').value = new Date().toISOString().slice(0, 10);
-    document.getElementById('tx-currency-symbol').textContent = appState.settings.currency === 'IDR' ? 'Rp' : '$';
+function renderSmartInsights() {
+    const list = document.getElementById('smart-insights-list');
+    const insights = [];
+    const now = new Date();
+    const sevenDaysAgo = new Date(now);
+    sevenDaysAgo.setDate(now.getDate() - 7);
+    const fourteenDaysAgo = new Date(now);
+    fourteenDaysAgo.setDate(now.getDate() - 14);
 
-    populateWalletSelects();
-    renderCategoryGrid();
-    setTxType('expense');
-    document.getElementById('tx-modal').classList.remove('hidden');
-    lucide.createIcons();
+    const thisWeekStr = sevenDaysAgo.toISOString().split('T')[0];
+    const lastWeekStr = fourteenDaysAgo.toISOString().split('T')[0];
+
+    const thisWeekExpenses = state.transactions.filter((t) => t.type === 'expense' && t.date >= thisWeekStr);
+    const lastWeekExpenses = state.transactions.filter(
+        (t) => t.type === 'expense' && t.date >= lastWeekStr && t.date < thisWeekStr
+    );
+
+    // 1. Kategori paling boros minggu ini
+    if (thisWeekExpenses.length > 0) {
+        const byCat = {};
+        thisWeekExpenses.forEach((t) => {
+            byCat[t.category] = (byCat[t.category] || 0) + t.amount;
+        });
+        const topCat = Object.entries(byCat).sort((a, b) => b[1] - a[1])[0];
+        insights.push(`• Kategori paling boros 7 hari terakhir: <strong>${topCat[0]}</strong> (${formatRupiah(topCat[1])}).`);
+    } else {
+        insights.push('• Belum ada pengeluaran minggu ini. Jatah harianmu masih utuh!');
+    }
+
+    // 2. Perbandingan minggu ini vs minggu lalu
+    const sumThis = thisWeekExpenses.reduce((s, t) => s + t.amount, 0);
+    const sumLast = lastWeekExpenses.reduce((s, t) => s + t.amount, 0);
+    if (sumLast > 0) {
+        const diffPct = Math.round(((sumThis - sumLast) / sumLast) * 100);
+        if (diffPct > 0) {
+            insights.push(`• Pengeluaran minggu ini <strong>naik ${diffPct}%</strong> dibanding minggu lalu.`);
+        } else {
+            insights.push(`• Mantap! Pengeluaran minggu ini <strong>lebih hemat ${Math.abs(diffPct)}%</strong> dari minggu lalu.`);
+        }
+    }
+
+    // 3. Pengingat backup data > 7 hari
+    const backupBadge = document.getElementById('insight-backup-badge');
+    const lastBackup = state.settings.lastBackupDate;
+    const needBackup = !lastBackup || (now - new Date(lastBackup)) / (1000 * 60 * 60 * 24) >= 7;
+    if (needBackup && state.transactions.length > 0) {
+        backupBadge.classList.remove('hidden');
+        insights.push('• ⚠️ Kamu belum backup data dalam 7 hari terakhir. Unduh JSON di menu Laporan.');
+    } else {
+        backupBadge.classList.add('hidden');
+    }
+
+    list.innerHTML = insights.map((i) => `<li>${i}</li>`).join('');
+}
+
+function renderSavingsView() {
+    document.getElementById('main-piggy-balance').textContent = formatRupiah(state.mainPiggyBank);
+    document.getElementById('toggle-auto-save-surplus').checked = state.settings.autoSaveSurplus;
+
+    const goalsList = document.getElementById('specific-goals-list');
+    if (state.specificGoals.length === 0) {
+        goalsList.innerHTML = `<p class="text-xs text-slate-400 text-center py-3">Belum ada target spesifik. Gunakan Celengan Utama di atas untuk nabung praktis!</p>`;
+        return;
+    }
+
+    goalsList.innerHTML = state.specificGoals
+        .map((g) => {
+            const pct = Math.min(100, Math.round((g.saved / g.target) * 100));
+            return `
+        <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700">
+          <div class="flex justify-between items-center mb-1">
+            <strong class="text-xs font-extrabold">${g.name}</strong>
+            <span class="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">${pct}%</span>
+          </div>
+          <div class="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden mb-2">
+            <div class="h-full bg-emerald-500" style="width: ${pct}%"></div>
+          </div>
+          <div class="flex items-center justify-between text-[11px] text-slate-500">
+            <span>${formatRupiah(g.saved)} / ${formatRupiah(g.target)}</span>
+            <button type="button" onclick="addFundToGoal('${g.id}')" class="font-bold text-slate-900 dark:text-yellow-400">+ Isi Rp 20rb</button>
+          </div>
+        </div>
+      `;
+        })
+        .join('');
+}
+
+function renderHistoryView() {
+    const search = document.getElementById('filter-search').value.toLowerCase();
+    const month = document.getElementById('filter-month').value;
+    const type = document.getElementById('filter-type').value;
+    const walletId = document.getElementById('filter-wallet').value;
+
+    const filtered = state.transactions.filter((tx) => {
+        const matchSearch =
+            (tx.note || '').toLowerCase().includes(search) || (tx.category || '').toLowerCase().includes(search);
+        const matchMonth = !month || tx.date.startsWith(month);
+        const matchType = type === 'all' || tx.type === type;
+        const matchWallet = walletId === 'all' || tx.walletId === walletId;
+        return matchSearch && matchMonth && matchType && matchWallet;
+    });
+
+    const container = document.getElementById('full-history-list');
+    container.innerHTML = filtered.length
+        ? filtered.map((tx) => renderTransactionItem(tx)).join('')
+        : `<p class="text-center text-xs text-slate-400 py-8">Tidak ada transaksi yang cocok dengan filter.</p>`;
+}
+
+function renderReportsView() {
+    const picker = document.getElementById('report-month-picker');
+    if (!picker.value) picker.value = getCurrentMonthStr();
+    const selectedMonth = picker.value;
+
+    const monthlyTxs = state.transactions.filter((t) => t.date.startsWith(selectedMonth));
+    const income = monthlyTxs.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+    const expense = monthlyTxs.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+
+    document.getElementById('report-income').textContent = formatRupiah(income);
+    document.getElementById('report-expense').textContent = formatRupiah(expense);
+
+    // Category Breakdown
+    const catMap = {};
+    monthlyTxs
+        .filter((t) => t.type === 'expense')
+        .forEach((t) => {
+            catMap[t.category] = (catMap[t.category] || 0) + t.amount;
+        });
+
+    const catContainer = document.getElementById('category-breakdown-list');
+    const entries = Object.entries(catMap).sort((a, b) => b[1] - a[1]);
+
+    if (entries.length === 0) {
+        catContainer.innerHTML = `<p class="text-xs text-slate-400">Belum ada pengeluaran pada bulan ini.</p>`;
+    } else {
+        catContainer.innerHTML = entries
+            .map(([cat, amt]) => {
+                const pct = expense > 0 ? Math.round((amt / expense) * 100) : 0;
+                return `
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <span class="font-semibold">${cat}</span>
+              <span class="font-bold">${formatRupiah(amt)} (${pct}%)</span>
+            </div>
+            <div class="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+              <div class="h-full bg-yellow-400 rounded-full" style="width: ${pct}%"></div>
+            </div>
+          </div>
+        `;
+            })
+            .join('');
+    }
+
+    // Recurring List
+    const recContainer = document.getElementById('recurring-list');
+    recContainer.innerHTML = state.recurring.length
+        ? state.recurring
+            .map(
+                (r) => `
+        <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 text-xs">
+          <div>
+            <p class="font-bold">${r.title} <span class="text-[10px] text-slate-400">(${r.frequency})</span></p>
+            <p class="text-[11px] text-slate-500">Berikutnya: ${r.nextDate} • ${formatRupiah(r.amount)}</p>
+          </div>
+          <button type="button" onclick="deleteRecurring('${r.id}')" class="text-rose-500 font-bold px-2">Hapus</button>
+        </div>
+      `
+            )
+            .join('')
+        : `<p class="text-xs text-slate-400">Belum ada jadwal transaksi berulang.</p>`;
+
+    // PIN Status
+    document.getElementById('pin-status-label').textContent = state.settings.pin
+        ? 'Aktif (4-digit PIN terpasang)'
+        : 'Belum aktif';
+}
+
+function populateWalletSelects() {
+    const optionsHtml = state.wallets.map((w) => `<option value="${w.id}">${w.name}</option>`).join('');
+    document.getElementById('tx-wallet-select').innerHTML = optionsHtml;
+    document.getElementById('tx-to-wallet-select').innerHTML = optionsHtml;
+    document.getElementById('filter-wallet').innerHTML = `<option value="all">Semua Dompet</option>` + optionsHtml;
+}
+
+/* ==================== MODAL & CALCULATOR LOGIC ==================== */
+function openModal(id) {
+    document.getElementById(id).classList.remove('hidden');
 }
 
 function closeModal(id) {
     document.getElementById(id).classList.add('hidden');
 }
 
-function setTxType(type) {
-    currentTxType = type;
-    const tabs = ['expense', 'income', 'transfer'];
-    const activeColors = {
-        expense: 'bg-rose-500 text-white',
-        income: 'bg-emerald-500 text-white',
-        transfer: 'bg-indigo-600 text-white'
-    };
-
-    tabs.forEach(tb => {
-        const el = document.getElementById(`tx-tab-${tb}`);
-        if (tb === type) {
-            el.className = `py-2 text-xs font-bold rounded-xl shadow-sm transition ${activeColors[tb]}`;
-        } else {
-            el.className = 'py-2 text-xs font-bold rounded-xl text-slate-600 dark:text-slate-300 transition';
-        }
-    });
-
-    const catGroup = document.getElementById('tx-category-group');
-    const toWalletGroup = document.getElementById('tx-wallet-to-group');
-    const fromLabel = document.getElementById('tx-wallet-from-label');
-
-    if (type === 'transfer') {
-        catGroup.classList.add('hidden');
-        toWalletGroup.classList.remove('hidden');
-        fromLabel.textContent = t('fromWalletLabel');
-    } else {
-        catGroup.classList.remove('hidden');
-        toWalletGroup.classList.add('hidden');
-        fromLabel.textContent = t('walletLabel');
-    }
-}
-
-function renderCategoryGrid() {
-    const grid = document.getElementById('tx-category-grid');
-    grid.innerHTML = CATEGORIES.map(cat => {
-        const active = selectedCategory === cat.id
-            ? 'ring-2 ring-indigo-600 bg-indigo-50/70 dark:bg-indigo-950/60'
-            : 'bg-slate-50 dark:bg-slate-800/70';
-        return `
-      <button type="button" onclick="selectCategory('${cat.id}')" class="p-2 rounded-xl flex flex-col items-center gap-1 transition ${active}">
-        <div class="w-7 h-7 rounded-lg ${cat.color} flex items-center justify-center">
-          <i data-lucide="${cat.icon}" class="w-3.5 h-3.5"></i>
-        </div>
-        <span class="text-[10px] font-bold text-slate-700 dark:text-slate-200 truncate w-full text-center">${t(cat.labelKey)}</span>
+function renderQuickTemplates() {
+    const bar = document.getElementById('quick-templates-bar');
+    bar.innerHTML = state.templates
+        .map(
+            (tpl) => `
+      <button type="button" onclick="executeOneTapTemplate('${tpl.id}')" class="shrink-0 px-3 py-1.5 rounded-xl bg-amber-100/80 dark:bg-slate-800 border border-amber-300/60 dark:border-slate-700 text-xs font-bold hover:bg-yellow-400 hover:text-slate-950 transition">
+        ${tpl.label} • Rp ${(tpl.amount / 1000).toLocaleString('id-ID')}rb
       </button>
-    `;
-    }).join('');
+    `
+        )
+        .join('');
 }
 
-function selectCategory(catId) {
-    selectedCategory = catId;
-    renderCategoryGrid();
-    lucide.createIcons();
-}
+window.executeOneTapTemplate = function (tplId) {
+    const tpl = state.templates.find((t) => t.id === tplId);
+    if (!tpl) return;
+    const walletId = document.getElementById('tx-wallet-select').value || state.wallets[0].id;
+    const wallet = state.wallets.find((w) => w.id === walletId);
+    if (!wallet) return;
 
-function populateWalletSelects() {
-    const options = appState.wallets.map(w => `<option value="${w.id}">${w.name} (${formatMoney(w.balanceIDR, true)})</option>`).join('');
-    ['tx-wallet-from', 'tx-wallet-to', 'topup-wallet-select', 'debt-wallet-select'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.innerHTML = options;
+    wallet.balance -= tpl.amount;
+    state.transactions.unshift({
+        id: 'tx_1tap_' + Date.now(),
+        type: 'expense',
+        amount: tpl.amount,
+        walletId: wallet.id,
+        category: tpl.category,
+        note: tpl.label,
+        date: getTodayStr(),
+        timestamp: Date.now()
     });
-    const toEl = document.getElementById('tx-wallet-to');
-    if (toEl && appState.wallets.length > 1) {
-        toEl.selectedIndex = 1;
+
+    saveState();
+    closeModal('modal-transaction');
+    renderAll();
+    showToast(`⚡ 1-Tap: ${tpl.label} (${formatRupiah(tpl.amount, true)}) tersimpan!`, 'success');
+};
+
+function evaluateCalcBuffer() {
+    try {
+        // Sanitasi ekspresi matematika sederhana
+        const sanitized = calcBuffer.replace(/[^0-9+\-*/.]/g, '');
+        if (!sanitized) return 0;
+        const result = Function('"use strict";return (' + sanitized + ')')();
+        return isFinite(result) ? Math.max(0, Math.round(result)) : 0;
+    } catch (e) {
+        return 0;
     }
 }
 
-function toggleCalculator() {
-    document.getElementById('calc-keypad').classList.toggle('hidden');
+function updateCalcDisplay() {
+    const val = evaluateCalcBuffer();
+    document.getElementById('calc-expression').textContent = /[+\-*/]/.test(calcBuffer) ? calcBuffer : '';
+    document.getElementById('calc-display').textContent = val.toLocaleString('id-ID');
+    updateSplitBillPreview();
 }
 
-function calcInput(key) {
-    const display = document.getElementById('tx-amount-display');
-    const preview = document.getElementById('calc-expression-preview');
+function updateSplitBillPreview() {
+    if (!document.getElementById('toggle-split-bill').checked) return;
+    const total = evaluateCalcBuffer();
+    const mode = document.getElementById('split-mode').value;
+    let friendShare = 0;
 
-    if (key === 'AC') {
-        calcExpression = '0';
-        preview.textContent = '';
-        display.value = '0';
-        return;
-    }
-
-    if (key === 'BACK') {
-        calcExpression = calcExpression.length > 1 ? calcExpression.slice(0, -1) : '0';
-        display.value = calcExpression;
-        return;
-    }
-
-    if (key === '=') {
-        try {
-            const sanitized = calcExpression.replace(/×/g, '*').replace(/÷/g, '/');
-            if (/^[0-9+\-*/.() ]+$/.test(sanitized)) {
-                const result = Function('"use strict";return (' + sanitized + ')')();
-                const roundedResult = Math.round(result * 100) / 100;
-                if (!Number.isFinite(result) || !Number.isFinite(roundedResult)) {
-                    throw new RangeError('Calculator result must be finite.');
-                }
-                const rounded = Math.max(0, roundedResult);
-                preview.textContent = calcExpression + ' =';
-                calcExpression = String(rounded);
-                display.value = calcExpression;
-            }
-        } catch {
-            display.value = '0';
-            calcExpression = '0';
-        }
-        return;
-    }
-
-    const operators = ['+', '-', '×', '÷'];
-    if (calcExpression === '0' && !operators.includes(key) && key !== '.') {
-        calcExpression = key === '000' ? '0' : key;
+    if (mode === 'equal') {
+        friendShare = Math.floor(total / 2);
     } else {
-        const lastChar = calcExpression.slice(-1);
-        if (operators.includes(lastChar) && operators.includes(key)) {
-            calcExpression = calcExpression.slice(0, -1) + key;
-        } else {
-            calcExpression += key;
-        }
+        friendShare = Math.min(total, Number(document.getElementById('split-friend-amount').value) || 0);
     }
-    display.value = calcExpression;
+    const myShare = Math.max(0, total - friendShare);
+    document.getElementById(
+        'split-summary-text'
+    ).textContent = `Bagianmu: ${formatRupiah(myShare, true)} • Piutang teman: ${formatRupiah(friendShare, true)}`;
 }
 
-function saveTransaction(e) {
-    e.preventDefault();
-    // Auto-evaluate if expression still has operators
-    calcInput('=');
-    const rawVal = parseFloat(document.getElementById('tx-amount-display').value) || 0;
-    if (rawVal <= 0) {
-        showToast(t('toastInvalidAmount'), 'error');
+/* ==================== CORE ACTIONS ==================== */
+function saveTransaction() {
+    const amount = evaluateCalcBuffer();
+    if (amount <= 0) {
+        showToast('Masukkan nominal transaksi terlebih dahulu!', 'error');
         return;
     }
 
-    const amountIDR = inputToIDR(rawVal);
-    const name = document.getElementById('tx-name').value.trim();
-    const walletId = document.getElementById('tx-wallet-from').value;
-    const toWalletId = document.getElementById('tx-wallet-to').value;
-    const date = document.getElementById('tx-date').value;
+    const walletId = document.getElementById('tx-wallet-select').value;
+    const wallet = state.wallets.find((w) => w.id === walletId);
+    const category = document.getElementById('tx-category-select').value;
+    const note = document.getElementById('tx-note').value.trim();
+    const today = getTodayStr();
 
-    if (currentTxType === 'transfer' && walletId === toWalletId) {
-        showToast(t('toastSameWallet'), 'error');
-        return;
-    }
+    if (!wallet) return;
 
-    const fromWallet = appState.wallets.find(w => w.id === walletId);
     if (currentTxType === 'expense') {
-        fromWallet.balanceIDR -= amountIDR;
+        const isSplit = document.getElementById('toggle-split-bill').checked;
+        if (isSplit) {
+            const friendName = document.getElementById('split-friend-name').value.trim() || 'Teman';
+            const mode = document.getElementById('split-mode').value;
+            const friendShare =
+                mode === 'equal'
+                    ? Math.floor(amount / 2)
+                    : Math.min(amount, Number(document.getElementById('split-friend-amount').value) || 0);
+            const myShare = Math.max(0, amount - friendShare);
+
+            // Total tagihan keluar dari dompet user dulu, bagian user masuk pengeluaran, bagian teman masuk piutang
+            wallet.balance -= amount;
+
+            state.transactions.unshift({
+                id: 'tx_' + Date.now(),
+                type: 'expense',
+                amount: myShare,
+                walletId: wallet.id,
+                category,
+                note: `${note || category} (Patungan dg ${friendName})`,
+                date: today,
+                timestamp: Date.now()
+            });
+
+            if (friendShare > 0) {
+                state.receivables.unshift({
+                    id: 'rec_' + Date.now(),
+                    friendName,
+                    amount: friendShare,
+                    note: note || category,
+                    walletId: wallet.id,
+                    date: today,
+                    paid: false
+                });
+            }
+            showToast(`🤝 Patungan dicatat! Piutang ${friendName}: ${formatRupiah(friendShare, true)}`, 'success');
+        } else {
+            wallet.balance -= amount;
+            state.transactions.unshift({
+                id: 'tx_' + Date.now(),
+                type: 'expense',
+                amount,
+                walletId: wallet.id,
+                category,
+                note: note || category,
+                date: today,
+                timestamp: Date.now()
+            });
+            showToast('Pengeluaran berhasil dicatat!', 'success');
+        }
     } else if (currentTxType === 'income') {
-        fromWallet.balanceIDR += amountIDR;
+        // Cek persentase sisihkan ke Celengan Utama
+        const piggyCut = Math.round((amount * selectedPiggyPct) / 100);
+        const walletNet = amount - piggyCut;
+
+        wallet.balance += walletNet;
+        if (piggyCut > 0) {
+            state.mainPiggyBank += piggyCut;
+        }
+
+        state.transactions.unshift({
+            id: 'tx_' + Date.now(),
+            type: 'income',
+            amount: walletNet,
+            walletId: wallet.id,
+            category: 'Pemasukan',
+            note:
+                piggyCut > 0
+                    ? `${note || 'Pemasukan'} (+${formatRupiah(piggyCut, true)} ke Celengan)`
+                    : note || 'Pemasukan',
+            date: today,
+            timestamp: Date.now()
+        });
+        showToast(
+            piggyCut > 0
+                ? `💰 Masuk! ${formatRupiah(piggyCut, true)} otomatis masuk Celengan Utama`
+                : 'Pemasukan berhasil dicatat!',
+            'success'
+        );
     } else if (currentTxType === 'transfer') {
-        const toWallet = appState.wallets.find(w => w.id === toWalletId);
-        fromWallet.balanceIDR -= amountIDR;
-        toWallet.balanceIDR += amountIDR;
-    }
-
-    appState.transactions.unshift({
-        id: 'tx_' + Date.now(),
-        type: currentTxType,
-        name,
-        amountIDR,
-        category: currentTxType === 'transfer' ? 'transfer' : selectedCategory,
-        walletId,
-        toWalletId: currentTxType === 'transfer' ? toWalletId : null,
-        date
-    });
-
-    saveState();
-    closeModal('tx-modal');
-    showToast(t('toastTxSaved'));
-    renderAll();
-}
-
-function deleteTransaction(txId) {
-    const idx = appState.transactions.findIndex(tx => tx.id === txId);
-    if (idx === -1) return;
-    const tx = appState.transactions[idx];
-
-    const fromWallet = appState.wallets.find(w => w.id === tx.walletId);
-    if (fromWallet) {
-        if (tx.type === 'expense') fromWallet.balanceIDR += tx.amountIDR;
-        if (tx.type === 'income') fromWallet.balanceIDR -= tx.amountIDR;
-        if (tx.type === 'transfer') {
-            fromWallet.balanceIDR += tx.amountIDR;
-            const toWallet = appState.wallets.find(w => w.id === tx.toWalletId);
-            if (toWallet) toWallet.balanceIDR -= tx.amountIDR;
+        const toWalletId = document.getElementById('tx-to-wallet-select').value;
+        if (walletId === toWalletId) {
+            showToast('Pilih dompet tujuan yang berbeda!', 'error');
+            return;
         }
+        const toWallet = state.wallets.find((w) => w.id === toWalletId);
+        wallet.balance -= amount;
+        toWallet.balance += amount;
+
+        state.transactions.unshift({
+            id: 'tx_' + Date.now(),
+            type: 'transfer',
+            amount,
+            walletId: wallet.id,
+            toWalletId: toWallet.id,
+            category: 'Transfer Antar Dompet',
+            note: note || `Transfer ke ${toWallet.name}`,
+            date: today,
+            timestamp: Date.now()
+        });
+        showToast(`Transfer ke ${toWallet.name} berhasil!`, 'success');
     }
 
-    appState.transactions.splice(idx, 1);
+    // Reset form modal
+    calcBuffer = '0';
+    document.getElementById('tx-note').value = '';
+    document.getElementById('toggle-split-bill').checked = false;
+    document.getElementById('split-bill-fields').classList.add('hidden');
     saveState();
-    showToast(t('toastTxDeleted'));
+    closeModal('modal-transaction');
     renderAll();
 }
 
-// ==================== WALLET & SAFE BUDGET MODALS ====================
-function openAddWalletModal() {
-    document.getElementById('new-wallet-name').value = '';
-    document.getElementById('wallet-modal').classList.remove('hidden');
-    lucide.createIcons();
-}
+window.markReceivablePaid = function (recId) {
+    const rec = state.receivables.find((r) => r.id === recId);
+    if (!rec || rec.paid) return;
+    rec.paid = true;
 
-function saveNewWallet(e) {
-    e.preventDefault();
-    const name = document.getElementById('new-wallet-name').value.trim();
-    const color = document.getElementById('new-wallet-color').value;
-
-    appState.wallets.push({
-        id: 'w_' + Date.now(),
-        name,
-        balanceIDR: 0,
-        color,
-        icon: 'wallet'
-    });
-
-    saveState();
-    closeModal('wallet-modal');
-    showToast(t('toastWalletAdded'));
-    renderAll();
-}
-
-function openSafeBudgetModal() {
-    document.getElementById('safe-total-input').value = idrToInput(appState.safeBudget.totalBudgetIDR);
-    document.getElementById('safe-days-input').value = appState.safeBudget.days;
-    document.getElementById('safe-budget-modal').classList.remove('hidden');
-    lucide.createIcons();
-}
-
-function saveSafeBudget(e) {
-    e.preventDefault();
-    const totalVal = parseFloat(document.getElementById('safe-total-input').value) || 0;
-    const days = parseInt(document.getElementById('safe-days-input').value) || 1;
-    appState.safeBudget = {
-        totalBudgetIDR: inputToIDR(totalVal),
-        days: Math.max(1, days)
-    };
-    saveState();
-    closeModal('safe-budget-modal');
-    showToast(t('toastBudgetUpdated'));
-    renderHome();
-    lucide.createIcons();
-}
-
-// ==================== RENDERING: HISTORY ====================
-function populateHistoryFilters() {
-    const monthSel = document.getElementById('filter-month');
-    const prevMonth = monthSel.value;
-    const months = [...new Set(appState.transactions.map(tx => tx.date.slice(0, 7)))].sort().reverse();
-    monthSel.innerHTML = `<option value="all">${t('allMonths')}</option>` +
-        months.map(m => `<option value="${m}">${m}</option>`).join('');
-    if (months.includes(prevMonth)) monthSel.value = prevMonth;
-
-    const walletSel = document.getElementById('filter-wallet');
-    const prevWallet = walletSel.value;
-    walletSel.innerHTML = `<option value="all">${t('allWallets')}</option>` +
-        appState.wallets.map(w => `<option value="${w.id}">${w.name}</option>`).join('');
-    if (appState.wallets.some(w => w.id === prevWallet)) walletSel.value = prevWallet;
-}
-
-function renderHistory() {
-    populateHistoryFilters();
-    const query = document.getElementById('history-search').value.toLowerCase().trim();
-    const fMonth = document.getElementById('filter-month').value;
-    const fType = document.getElementById('filter-type').value;
-    const fWallet = document.getElementById('filter-wallet').value;
-
-    const filtered = appState.transactions.filter(tx => {
-        const matchName = tx.name.toLowerCase().includes(query);
-        const matchMonth = fMonth === 'all' || tx.date.startsWith(fMonth);
-        const matchType = fType === 'all' || tx.type === fType;
-        const matchWallet = fWallet === 'all' || tx.walletId === fWallet || tx.toWalletId === fWallet;
-        return matchName && matchMonth && matchType && matchWallet;
-    }).sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id));
-
-    document.getElementById('history-count-badge').textContent = filtered.length;
-    const container = document.getElementById('history-grouped-list');
-
-    if (filtered.length === 0) {
-        container.innerHTML = renderEmptyState('search-x', t('noTransactions'), t('noTransactionsDesc'));
-        lucide.createIcons();
-        return;
-    }
-
-    // Group by date
-    const groups = {};
-    filtered.forEach(tx => {
-        if (!groups[tx.date]) groups[tx.date] = [];
-        groups[tx.date].push(tx);
-    });
-
-    container.innerHTML = Object.keys(groups).map(date => `
-    <div class="space-y-2">
-      <div class="flex items-center justify-between px-1">
-        <span class="text-xs font-extrabold text-slate-500 dark:text-slate-400">${date}</span>
-        <span class="text-[11px] font-semibold text-slate-400">${groups[date].length} ${t('itemCount')}</span>
-      </div>
-      <div class="space-y-2">
-        ${groups[date].map(tx => renderTransactionCard(tx, true)).join('')}
-      </div>
-    </div>
-  `).join('');
-
-    lucide.createIcons();
-}
-
-// ==================== GOALS & RECEIVABLES (PIUTANG) ====================
-function switchGoalsTab(tab) {
-    const goalsBtn = document.getElementById('subtab-goals-btn');
-    const debtsBtn = document.getElementById('subtab-debts-btn');
-    const goalsPanel = document.getElementById('goals-panel');
-    const debtsPanel = document.getElementById('debts-panel');
-
-    if (tab === 'goals') {
-        goalsBtn.className = 'py-2.5 text-xs font-bold rounded-xl bg-white dark:bg-slate-800 text-indigo-600 dark:text-white shadow-sm transition';
-        debtsBtn.className = 'py-2.5 text-xs font-bold rounded-xl text-slate-500 dark:text-slate-400 transition';
-        goalsPanel.classList.remove('hidden');
-        debtsPanel.classList.add('hidden');
-    } else {
-        debtsBtn.className = 'py-2.5 text-xs font-bold rounded-xl bg-white dark:bg-slate-800 text-amber-600 dark:text-amber-400 shadow-sm transition';
-        goalsBtn.className = 'py-2.5 text-xs font-bold rounded-xl text-slate-500 dark:text-slate-400 transition';
-        debtsPanel.classList.remove('hidden');
-        goalsPanel.classList.add('hidden');
-    }
-}
-
-function renderGoalsAndDebts() {
-    // Render Goals
-    const goalsList = document.getElementById('goals-list');
-    if (appState.goals.length === 0) {
-        goalsList.innerHTML = renderEmptyState('target', t('noGoals'), t('noGoalsDesc'));
-    } else {
-        goalsList.innerHTML = appState.goals.map(g => {
-            const pct = g.targetIDR > 0 ? Math.min(100, Math.round((g.savedIDR / g.targetIDR) * 100)) : 0;
-            const summaryText = t('collectedOf')
-                .replace('{saved}', formatMoney(g.savedIDR))
-                .replace('{target}', formatMoney(g.targetIDR));
-
-            return `
-        <div class="bg-white dark:bg-slate-900 p-4 rounded-3xl border border-slate-200/70 dark:border-slate-800 shadow-sm space-y-3">
-          <div class="flex items-start justify-between">
-            <div>
-              <h4 class="font-extrabold text-sm text-slate-800 dark:text-slate-100">${g.name}</h4>
-              <p class="text-[11px] text-slate-400 mt-0.5">${t('deadlinePrefix')} ${g.deadline}</p>
-            </div>
-            <span class="px-2.5 py-1 rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 text-xs font-extrabold">${pct}%</span>
-          </div>
-          <div>
-            <p class="text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">${summaryText}</p>
-            <div class="w-full h-2.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-              <div class="h-full bg-indigo-600 rounded-full transition-all duration-500" style="width: ${pct}%"></div>
-            </div>
-          </div>
-          <button onclick="openTopupGoalModal('${g.id}')" class="w-full py-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 text-indigo-600 dark:text-indigo-300 font-bold text-xs transition">
-            + ${t('topupBtn')}
-          </button>
-        </div>
-      `;
-        }).join('');
-    }
-
-    // Render Receivables (Debts)
-    const debtsList = document.getElementById('debts-list');
-    if (appState.debts.length === 0) {
-        debtsList.innerHTML = renderEmptyState('hand-coins', t('noDebts'), t('noDebtsDesc'));
-    } else {
-        debtsList.innerHTML = appState.debts.map(d => {
-            const badgeClass = d.paid
-                ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400'
-                : 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400';
-            return `
-        <div class="bg-white dark:bg-slate-900 p-4 rounded-3xl border border-slate-200/70 dark:border-slate-800 shadow-sm space-y-3">
-          <div class="flex items-start justify-between">
-            <div>
-              <h4 class="font-extrabold text-sm text-slate-800 dark:text-slate-100">${d.person}</h4>
-              <p class="text-[11px] text-slate-400 mt-0.5">${getWalletName(d.walletId)} • ${t('duePrefix')} ${d.dueDate}</p>
-            </div>
-            <span class="px-2.5 py-1 rounded-full text-[11px] font-bold ${badgeClass}">
-              ${d.paid ? t('paidBadge') : t('unpaidBadge')}
-            </span>
-          </div>
-          <div class="flex items-center justify-between pt-1">
-            <span class="text-base font-extrabold text-slate-900 dark:text-white">${formatMoney(d.amountIDR)}</span>
-            ${!d.paid ? `
-              <button onclick="markDebtPaid('${d.id}')" class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition">
-                ✓ ${t('markPaidBtn')}
-              </button>
-            ` : ''}
-          </div>
-        </div>
-      `;
-        }).join('');
-    }
-
-    lucide.createIcons();
-}
-
-function openAddGoalModal() {
-    document.getElementById('goal-name-input').value = '';
-    document.getElementById('goal-target-input').value = '';
-    document.getElementById('goal-deadline-input').value = new Date().toISOString().slice(0, 10);
-    document.getElementById('goal-modal').classList.remove('hidden');
-    lucide.createIcons();
-}
-
-function saveNewGoal(e) {
-    e.preventDefault();
-    const name = document.getElementById('goal-name-input').value.trim();
-    const targetVal = parseFloat(document.getElementById('goal-target-input').value) || 0;
-    const deadline = document.getElementById('goal-deadline-input').value;
-
-    if (targetVal <= 0) {
-        showToast(t('toastInvalidAmount'), 'error');
-        return;
-    }
-
-    appState.goals.push({
-        id: 'goal_' + Date.now(),
-        name,
-        targetIDR: inputToIDR(targetVal),
-        savedIDR: 0,
-        deadline
-    });
-
-    saveState();
-    closeModal('goal-modal');
-    showToast(t('toastGoalAdded'));
-    renderGoalsAndDebts();
-}
-
-function openTopupGoalModal(goalId) {
-    const goal = appState.goals.find(g => g.id === goalId);
-    if (!goal) return;
-    document.getElementById('topup-goal-id').value = goalId;
-    document.getElementById('topup-goal-title-label').textContent = goal.name;
-    document.getElementById('topup-amount-input').value = '';
-    populateWalletSelects();
-    document.getElementById('topup-goal-modal').classList.remove('hidden');
-    lucide.createIcons();
-}
-
-function submitGoalTopup(e) {
-    e.preventDefault();
-    const goalId = document.getElementById('topup-goal-id').value;
-    const amountVal = parseFloat(document.getElementById('topup-amount-input').value) || 0;
-    const walletId = document.getElementById('topup-wallet-select').value;
-
-    if (amountVal <= 0) {
-        showToast(t('toastInvalidAmount'), 'error');
-        return;
-    }
-
-    const amountIDR = inputToIDR(amountVal);
-    const goal = appState.goals.find(g => g.id === goalId);
-    const wallet = appState.wallets.find(w => w.id === walletId);
-
-    if (goal && wallet) {
-        wallet.balanceIDR -= amountIDR;
-        goal.savedIDR += amountIDR;
-    }
-
-    saveState();
-    closeModal('topup-goal-modal');
-    showToast(t('toastGoalTopup'));
-    renderAll();
-}
-
-function openAddDebtModal() {
-    document.getElementById('debt-person-input').value = '';
-    document.getElementById('debt-amount-input').value = '';
-    document.getElementById('debt-due-input').value = new Date().toISOString().slice(0, 10);
-    populateWalletSelects();
-    document.getElementById('debt-modal').classList.remove('hidden');
-    lucide.createIcons();
-}
-
-function saveNewDebt(e) {
-    e.preventDefault();
-    const person = document.getElementById('debt-person-input').value.trim();
-    const amountVal = parseFloat(document.getElementById('debt-amount-input').value) || 0;
-    const dueDate = document.getElementById('debt-due-input').value;
-    const walletId = document.getElementById('debt-wallet-select').value;
-
-    if (amountVal <= 0) {
-        showToast(t('toastInvalidAmount'), 'error');
-        return;
-    }
-
-    const amountIDR = inputToIDR(amountVal);
-    const wallet = appState.wallets.find(w => w.id === walletId);
+    const wallet = state.wallets.find((w) => w.id === rec.walletId) || state.wallets[0];
     if (wallet) {
-        wallet.balanceIDR -= amountIDR;
+        wallet.balance += rec.amount;
     }
 
-    appState.debts.unshift({
-        id: 'debt_' + Date.now(),
-        person,
-        amountIDR,
-        dueDate,
-        walletId,
-        paid: false
+    state.transactions.unshift({
+        id: 'tx_paid_' + Date.now(),
+        type: 'income',
+        amount: rec.amount,
+        walletId: wallet.id,
+        category: 'Pelunasan Piutang',
+        note: `Lunas patungan dari ${rec.friendName}`,
+        date: getTodayStr(),
+        timestamp: Date.now()
     });
 
     saveState();
-    closeModal('debt-modal');
-    showToast(t('toastDebtAdded'));
     renderAll();
-}
+    showToast(`✅ Piutang ${rec.friendName} (${formatRupiah(rec.amount, true)}) lunas & masuk saldo!`, 'success');
+};
 
-function markDebtPaid(debtId) {
-    const debt = appState.debts.find(d => d.id === debtId);
-    if (!debt || debt.paid) return;
-
-    debt.paid = true;
-    const wallet = appState.wallets.find(w => w.id === debt.walletId);
-    if (wallet) {
-        wallet.balanceIDR += debt.amountIDR;
+window.quickFillPiggy = function (amount) {
+    const mainWallet = state.wallets.find((w) => w.isMain) || state.wallets[0];
+    if (!mainWallet || mainWallet.balance < amount) {
+        showToast('Saldo Dompet Utama tidak mencukupi!', 'error');
+        return;
     }
-
-    saveState();
-    showToast(t('toastDebtPaid'));
-    renderAll();
-}
-
-// ==================== REPORT & ACCOUNT ====================
-function renderReport() {
-    const monthSelect = document.getElementById('report-month-select');
-    const currentYM = new Date().toISOString().slice(0, 7);
-    const months = [...new Set([currentYM, ...appState.transactions.map(tx => tx.date.slice(0, 7))])].sort().reverse();
-    const selected = months.includes(monthSelect.value) ? monthSelect.value : currentYM;
-
-    monthSelect.innerHTML = months.map(m => `<option value="${m}">${m}</option>`).join('');
-    monthSelect.value = selected;
-
-    let income = 0;
-    let expense = 0;
-    const catTotals = {};
-
-    appState.transactions.forEach(tx => {
-        if (tx.date.startsWith(selected)) {
-            if (tx.type === 'income') income += tx.amountIDR;
-            if (tx.type === 'expense') {
-                expense += tx.amountIDR;
-                catTotals[tx.category] = (catTotals[tx.category] || 0) + tx.amountIDR;
-            }
-        }
+    mainWallet.balance -= amount;
+    state.mainPiggyBank += amount;
+    state.transactions.unshift({
+        id: 'tx_piggy_' + Date.now(),
+        type: 'transfer',
+        amount,
+        walletId: mainWallet.id,
+        toWalletId: 'piggy_main',
+        category: 'Isi Celengan Utama',
+        note: 'Menabung ke Celengan Utama',
+        date: getTodayStr(),
+        timestamp: Date.now()
     });
+    saveState();
+    renderAll();
+    showToast(`🐷 Berhasil nabung ${formatRupiah(amount, true)} ke Celengan Utama!`, 'success');
+};
 
-    document.getElementById('report-income').textContent = formatMoney(income);
-    document.getElementById('report-expense').textContent = formatMoney(expense);
-    const net = income - expense;
-    document.getElementById('report-net-diff').textContent = (net >= 0 ? '+' : '') + formatMoney(net);
-
-    const totalFlow = income + expense;
-    const incPct = totalFlow > 0 ? (income / totalFlow) * 100 : 50;
-    const expPct = totalFlow > 0 ? (expense / totalFlow) * 100 : 50;
-    document.getElementById('report-income-bar').style.width = `${incPct}%`;
-    document.getElementById('report-expense-bar').style.width = `${expPct}%`;
-
-    // Category Breakdown
-    const catList = document.getElementById('category-breakdown-list');
-    const sortedCats = Object.entries(catTotals).sort((a, b) => b[1] - a[1]);
-
-    if (sortedCats.length === 0) {
-        catList.innerHTML = `<p class="text-xs text-slate-400 text-center py-4">${t('noExpenseData')}</p>`;
-    } else {
-        catList.innerHTML = sortedCats.map(([catId, val]) => {
-            const cat = CATEGORIES.find(c => c.id === catId) || CATEGORIES[7];
-            const pct = expense > 0 ? Math.round((val / expense) * 100) : 0;
-            return `
-        <div class="space-y-1">
-          <div class="flex items-center justify-between text-xs">
-            <span class="font-bold text-slate-700 dark:text-slate-200 flex items-center gap-2">
-              <i data-lucide="${cat.icon}" class="w-3.5 h-3.5 text-indigo-500"></i>
-              ${t(cat.labelKey)}
-            </span>
-            <span class="font-bold text-slate-600 dark:text-slate-300">${formatMoney(val)} (${pct}%)</span>
-          </div>
-          <div class="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-            <div class="h-full bg-indigo-600 rounded-full" style="width: ${pct}%"></div>
-          </div>
-        </div>
-      `;
-        }).join('');
+window.addFundToGoal = function (goalId) {
+    const amount = 20000;
+    const mainWallet = state.wallets.find((w) => w.isMain) || state.wallets[0];
+    const goal = state.specificGoals.find((g) => g.id === goalId);
+    if (!goal || !mainWallet || mainWallet.balance < amount) {
+        showToast('Saldo Dompet Utama kurang dari Rp 20.000', 'error');
+        return;
     }
+    mainWallet.balance -= amount;
+    goal.saved += amount;
+    saveState();
+    renderAll();
+    showToast(`🎯 +Rp 20.000 masuk ke target "${goal.name}"!`, 'success');
+};
 
-    // Sync Account Settings Inputs
-    document.getElementById('settings-username-input').value = appState.user.name;
-    document.getElementById('settings-currency-select').value = appState.settings.currency;
-    document.getElementById('settings-lang-select').value = appState.settings.lang;
+window.deleteRecurring = function (id) {
+    state.recurring = state.recurring.filter((r) => r.id !== id);
+    saveState();
+    renderReportsView();
+    showToast('Jadwal berulang dihapus.');
+};
 
-    lucide.createIcons();
-}
+/* ==================== NAVIGATION ==================== */
+window.switchTab = function (target) {
+    document.querySelectorAll('.app-view').forEach((el) => el.classList.add('hidden'));
+    document.getElementById(`view-${target}`).classList.remove('hidden');
 
-function updateProfileName() {
-    const val = document.getElementById('settings-username-input').value.trim();
-    if (val) {
-        appState.user.name = val;
-        saveState();
-        showToast(t('toastProfileSaved'));
-        renderAll();
+    document.querySelectorAll('.nav-item').forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset.target === target);
+    });
+};
+
+/* ==================== PIN SECURITY LOCK ==================== */
+function initPinLock() {
+    if (state.user && state.settings.pin) {
+        isSettingNewPin = false;
+        pinInputBuffer = '';
+        document.getElementById('pin-prompt-text').textContent = 'Masukkan 4-digit PIN keamanan Anda';
+        document.getElementById('pin-lock-screen').classList.remove('hidden');
+        updatePinDots();
     }
 }
 
-// ==================== DATA EXPORT, BACKUP, RESTORE, RESET ====================
-function exportToCSV() {
-    const headers = ['ID', 'Date', 'Type', 'Name', 'Category', 'Wallet', 'Amount_IDR', 'Amount_USD'];
-    const rows = appState.transactions.map(tx => [
-        tx.id,
-        tx.date,
-        tx.type,
-        `"${tx.name.replace(/"/g, '""')}"`,
-        tx.category,
-        `"${getWalletName(tx.walletId)}"`,
-        Math.round(tx.amountIDR),
-        (tx.amountIDR / USD_RATE).toFixed(2)
-    ]);
-    const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-    downloadFile(csv, `sakupintar-report-${new Date().toISOString().slice(0, 10)}.csv`, 'text/csv;charset=utf-8;');
-    showToast(t('toastCsvExported'));
+function updatePinDots() {
+    const dots = document.querySelectorAll('.pin-dot');
+    dots.forEach((dot, idx) => {
+        dot.classList.toggle('filled', idx < pinInputBuffer.length);
+    });
 }
 
-function backupJSON() {
-    const json = JSON.stringify(appState, null, 2);
-    downloadFile(json, `sakupintar-backup-${new Date().toISOString().slice(0, 10)}.json`, 'application/json');
-    showToast(t('toastJsonBackup'));
-}
+function handlePinDigit(num) {
+    if (pinInputBuffer.length >= 4) return;
+    pinInputBuffer += num;
+    updatePinDots();
 
-function restoreJSON(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = function (ev) {
-        try {
-            const parsed = JSON.parse(ev.target.result);
-            if (parsed && Array.isArray(parsed.wallets) && Array.isArray(parsed.transactions)) {
-                appState = parsed;
+    if (pinInputBuffer.length === 4) {
+        setTimeout(() => {
+            if (isSettingNewPin) {
+                state.settings.pin = pinInputBuffer;
                 saveState();
-                applyTheme();
-                applyTranslations();
-                renderAll();
-                showToast(t('toastJsonRestored'));
+                document.getElementById('pin-lock-screen').classList.add('hidden');
+                renderReportsView();
+                showToast('🔒 PIN 4-digit berhasil diaktifkan!', 'success');
             } else {
-                showToast(t('toastJsonError'), 'error');
+                if (pinInputBuffer === state.settings.pin) {
+                    document.getElementById('pin-lock-screen').classList.add('hidden');
+                } else {
+                    showToast('PIN salah! Coba lagi.', 'error');
+                }
             }
-        } catch {
-            showToast(t('toastJsonError'), 'error');
-        }
-    };
-    reader.readAsText(file);
-    e.target.value = '';
+            pinInputBuffer = '';
+            updatePinDots();
+        }, 150);
+    }
 }
 
-function downloadFile(content, filename, mimeType) {
-    const blob = new Blob([content], { type: mimeType });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-}
-
-function openResetModal() {
-    document.getElementById('reset-modal').classList.remove('hidden');
-    lucide.createIcons();
-}
-
-function confirmResetAll() {
-    const currentUser = appState.user;
-    const currentSettings = appState.settings;
-    appState = getDefaultData();
-    appState.isLoggedIn = true;
-    appState.user = currentUser;
-    appState.settings = currentSettings;
-    saveState();
-    closeModal('reset-modal');
-    showToast(t('toastResetDone'));
-    renderAll();
-}
-
-// ==================== INITIALIZATION ====================
-function renderAll() {
-    applyTranslations();
-    renderHome();
-    renderHistory();
-    renderGoalsAndDebts();
-    renderReport();
-    lucide.createIcons();
-}
-
+/* ==================== EVENT LISTENERS ==================== */
 document.addEventListener('DOMContentLoaded', () => {
-    switchAuthTab('login');
-    applyTheme();
-    applyTranslations();
-    checkAuth();
+    // 1. Auth Screen Logic
+    const tabLogin = document.getElementById('tab-auth-login');
+    const tabRegister = document.getElementById('tab-auth-register');
+    const authSubmitBtn = document.getElementById('auth-submit-btn');
+
+    tabLogin.addEventListener('click', () => {
+        tabLogin.className = 'py-2.5 text-sm font-bold rounded-lg bg-white text-slate-950 shadow transition-all';
+        tabRegister.className = 'py-2.5 text-sm font-bold rounded-lg bg-slate-950 text-white transition-all';
+        authSubmitBtn.textContent = 'Masuk ke SakuPintar';
+    });
+
+    tabRegister.addEventListener('click', () => {
+        tabRegister.className = 'py-2.5 text-sm font-bold rounded-lg bg-white text-slate-950 shadow transition-all';
+        tabLogin.className = 'py-2.5 text-sm font-bold rounded-lg bg-slate-950 text-white transition-all';
+        authSubmitBtn.textContent = 'Buat Akun & Mulai';
+    });
+
+    document.getElementById('auth-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const name = document.getElementById('auth-fullname').value.trim() || 'Pengguna';
+        const pass = document.getElementById('auth-password').value.trim();
+        state.user = { name, isGuest: false };
+        if (/^\d{4}$/.test(pass)) {
+            state.settings.pin = pass;
+        }
+        saveState();
+        runDailyAutomation();
+        renderAll();
+        showToast(`Selamat datang, ${name}! Dompet Utama siap digunakan.`, 'success');
+    });
+
+    document.getElementById('btn-guest-login').addEventListener('click', () => {
+        state.user = { name: 'Tamu', isGuest: true };
+        saveState();
+        runDailyAutomation();
+        renderAll();
+        showToast('⚡ Masuk sebagai Tamu! Dompet Utama (Rp 0) otomatis dibuat.', 'success');
+    });
+
+    // 2. Header Toggles (Privacy & Dark Mode)
+    document.getElementById('btn-toggle-privacy').addEventListener('click', () => {
+        state.settings.privacyMode = !state.settings.privacyMode;
+        saveState();
+        renderAll();
+    });
+
+    document.getElementById('btn-toggle-theme').addEventListener('click', () => {
+        state.settings.darkMode = !state.settings.darkMode;
+        saveState();
+        applyTheme();
+    });
+
+    // 3. Bottom Navigation
+    document.querySelectorAll('.nav-item').forEach((btn) => {
+        btn.addEventListener('click', () => switchTab(btn.dataset.target));
+    });
+
+    // 4. Modal Catat Transaksi
+    document.getElementById('btn-open-tx-modal').addEventListener('click', () => {
+        calcBuffer = '0';
+        updateCalcDisplay();
+        renderQuickTemplates();
+        openModal('modal-transaction');
+    });
+
+    document.querySelectorAll('.tx-type-tab').forEach((tab) => {
+        tab.addEventListener('click', () => {
+            document.querySelectorAll('.tx-type-tab').forEach((t) => t.classList.remove('active'));
+            tab.classList.add('active');
+            currentTxType = tab.dataset.type;
+
+            const isIncome = currentTxType === 'income';
+            const isTransfer = currentTxType === 'transfer';
+            const isExpense = currentTxType === 'expense';
+
+            document.getElementById('income-piggy-chips').classList.toggle('hidden', !isIncome);
+            document.getElementById('quick-templates-wrapper').classList.toggle('hidden', !isExpense);
+            document.getElementById('split-bill-section').classList.toggle('hidden', !isExpense);
+            document.getElementById('tx-category-group').classList.toggle('hidden', isTransfer);
+            document.getElementById('tx-to-wallet-group').classList.toggle('hidden', !isTransfer);
+            document.getElementById('tx-wallet-label').textContent = isIncome ? 'Masuk ke Dompet' : 'Dari Dompet';
+        });
+    });
+
+    // Chip Persentase Celengan Utama
+    document.querySelectorAll('.piggy-chip').forEach((chip) => {
+        chip.addEventListener('click', () => {
+            document.querySelectorAll('.piggy-chip').forEach((c) => c.classList.remove('active'));
+            chip.classList.add('active');
+            selectedPiggyPct = Number(chip.dataset.pct);
+        });
+    });
+
+    // Split Bill Toggles
+    document.getElementById('toggle-split-bill').addEventListener('change', (e) => {
+        document.getElementById('split-bill-fields').classList.toggle('hidden', !e.target.checked);
+        updateSplitBillPreview();
+    });
+
+    document.getElementById('split-mode').addEventListener('change', (e) => {
+        document.getElementById('split-custom-amount-wrap').classList.toggle('hidden', e.target.value !== 'custom');
+        updateSplitBillPreview();
+    });
+
+    document.getElementById('split-friend-amount').addEventListener('input', updateSplitBillPreview);
+
+    // Keypad Kalkulator Events
+    document.querySelectorAll('.calc-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            const val = btn.dataset.val;
+            const action = btn.dataset.action;
+
+            if (val) {
+                if (calcBuffer === '0' && !['+', '-', '*', '/'].includes(val)) {
+                    calcBuffer = val === '000' ? '0' : val;
+                } else {
+                    calcBuffer += val;
+                }
+            } else if (action === 'backspace') {
+                calcBuffer = calcBuffer.length > 1 ? calcBuffer.slice(0, -1) : '0';
+            } else if (action === 'clear') {
+                calcBuffer = '0';
+            } else if (action === 'equals') {
+                calcBuffer = String(evaluateCalcBuffer());
+            }
+            updateCalcDisplay();
+        });
+    });
+
+    document.getElementById('btn-save-transaction').addEventListener('click', saveTransaction);
+
+    // 5. Modal Dompet Baru
+    document.getElementById('btn-open-wallet-modal').addEventListener('click', () => openModal('modal-wallet'));
+    document.querySelectorAll('.color-choice').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.color-choice').forEach((b) => b.classList.remove('selected'));
+            btn.classList.add('selected');
+            selectedWalletColor = btn.dataset.color;
+        });
+    });
+
+    document.getElementById('form-add-wallet').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const name = document.getElementById('wallet-name').value.trim();
+        const balance = Number(document.getElementById('wallet-balance').value) || 0;
+        state.wallets.push({
+            id: 'wallet_' + Date.now(),
+            name,
+            balance,
+            color: selectedWalletColor,
+            isMain: false
+        });
+        saveState();
+        closeModal('modal-wallet');
+        e.target.reset();
+        renderAll();
+        showToast(`Dompet "${name}" ditambahkan!`, 'success');
+    });
+
+    // 6. Celengan Pintar & Target Spesifik
+    document.getElementById('toggle-auto-save-surplus').addEventListener('change', (e) => {
+        state.settings.autoSaveSurplus = e.target.checked;
+        saveState();
+        showToast(e.target.checked ? 'Auto-Tabung Sisa Jatah AKTIF' : 'Auto-Tabung Sisa Jatah NONAKTIF');
+    });
+
+    document.getElementById('btn-withdraw-main-piggy').addEventListener('click', () => {
+        if (state.mainPiggyBank <= 0) {
+            showToast('Celengan Utama masih kosong!', 'error');
+            return;
+        }
+        const amt = state.mainPiggyBank;
+        const mainWallet = state.wallets.find((w) => w.isMain) || state.wallets[0];
+        mainWallet.balance += amt;
+        state.mainPiggyBank = 0;
+        state.transactions.unshift({
+            id: 'tx_wd_' + Date.now(),
+            type: 'transfer',
+            amount: amt,
+            walletId: 'piggy_main',
+            toWalletId: mainWallet.id,
+            category: 'Tarik Celengan Utama',
+            note: 'Pencairan Celengan Utama ke Dompet Utama',
+            date: getTodayStr(),
+            timestamp: Date.now()
+        });
+        saveState();
+        renderAll();
+        showToast(`💸 ${formatRupiah(amt, true)} dipindahkan ke Dompet Utama!`, 'success');
+    });
+
+    document.getElementById('btn-open-goal-modal').addEventListener('click', () => openModal('modal-goal'));
+    document.getElementById('form-add-goal').addEventListener('submit', (e) => {
+        e.preventDefault();
+        state.specificGoals.push({
+            id: 'goal_' + Date.now(),
+            name: document.getElementById('goal-name').value.trim(),
+            target: Number(document.getElementById('goal-target').value),
+            saved: 0,
+            deadline: document.getElementById('goal-deadline').value
+        });
+        saveState();
+        closeModal('modal-goal');
+        e.target.reset();
+        renderSavingsView();
+        showToast('Target nabung spesifik dibuat!', 'success');
+    });
+
+    // 7. Filter Riwayat & Laporan
+    ['filter-search', 'filter-month', 'filter-type', 'filter-wallet'].forEach((id) => {
+        document.getElementById(id).addEventListener('input', renderHistoryView);
+    });
+    document.getElementById('report-month-picker').addEventListener('change', renderReportsView);
+
+    // 8. Transaksi Berulang
+    document.getElementById('btn-open-recurring-modal').addEventListener('click', () => {
+        document.getElementById('rec-next-date').value = getTodayStr();
+        openModal('modal-recurring');
+    });
+    document.getElementById('form-add-recurring').addEventListener('submit', (e) => {
+        e.preventDefault();
+        state.recurring.push({
+            id: 'rec_sched_' + Date.now(),
+            type: document.getElementById('rec-type').value,
+            title: document.getElementById('rec-title').value.trim(),
+            amount: Number(document.getElementById('rec-amount').value),
+            frequency: document.getElementById('rec-frequency').value,
+            nextDate: document.getElementById('rec-next-date').value,
+            walletId: state.wallets[0].id
+        });
+        saveState();
+        closeModal('modal-recurring');
+        e.target.reset();
+        runDailyAutomation();
+        renderAll();
+        showToast('Jadwal transaksi berulang aktif!', 'success');
+    });
+
+    // 9. Kustom Template 1-Tap
+    document.getElementById('btn-edit-templates').addEventListener('click', () => openModal('modal-templates'));
+    document.getElementById('form-add-template').addEventListener('submit', (e) => {
+        e.preventDefault();
+        state.templates.push({
+            id: 'tpl_' + Date.now(),
+            label: document.getElementById('tpl-label').value.trim(),
+            amount: Number(document.getElementById('tpl-amount').value),
+            category: document.getElementById('tpl-category').value
+        });
+        saveState();
+        closeModal('modal-templates');
+        e.target.reset();
+        renderQuickTemplates();
+        showToast('Template 1-Tap ditambahkan!', 'success');
+    });
+
+    // 10. Security PIN & Data Backup/Restore
+    document.getElementById('btn-setup-pin').addEventListener('click', () => {
+        isSettingNewPin = true;
+        pinInputBuffer = '';
+        document.getElementById('pin-prompt-text').textContent = 'Buat 4-digit PIN baru Anda';
+        document.getElementById('pin-lock-screen').classList.remove('hidden');
+        updatePinDots();
+    });
+
+    document.querySelectorAll('.pin-key[data-num]').forEach((btn) => {
+        btn.addEventListener('click', () => handlePinDigit(btn.dataset.num));
+    });
+    document.getElementById('pin-del-btn').addEventListener('click', () => {
+        pinInputBuffer = pinInputBuffer.slice(0, -1);
+        updatePinDots();
+    });
+    document.getElementById('pin-reset-btn').addEventListener('click', () => {
+        if (confirm('Hapus PIN dan reset seluruh data SakuPintar?')) {
+            localStorage.removeItem(STORAGE_KEY);
+            location.reload();
+        }
+    });
+
+    document.getElementById('btn-export-csv').addEventListener('click', () => {
+        const headers = ['Tanggal,Tipe,Kategori,Catatan,Nominal'];
+        const rows = state.transactions.map(
+            (t) => `${t.date},${t.type},"${t.category}","${(t.note || '').replace(/"/g, '""')}",${t.amount}`
+        );
+        const blob = new Blob([headers.concat(rows).join('\n')], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `SakuPintar_Transaksi_${getTodayStr()}.csv`;
+        link.click();
+        showToast('File CSV berhasil diunduh!', 'success');
+    });
+
+    document.getElementById('btn-backup-json').addEventListener('click', () => {
+        state.settings.lastBackupDate = getTodayStr();
+        saveState();
+        const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `SakuPintar_Backup_${getTodayStr()}.json`;
+        link.click();
+        renderSmartInsights();
+        showToast('Backup JSON berhasil disimpan!', 'success');
+    });
+
+    document.getElementById('input-restore-json').addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            try {
+                const restored = JSON.parse(ev.target.result);
+                if (restored.wallets && restored.transactions) {
+                    state = { ...getDefaultState(), ...restored };
+                    saveState();
+                    renderAll();
+                    showToast('Data berhasil dipulihkan dari backup!', 'success');
+                } else {
+                    showToast('Format file JSON tidak valid!', 'error');
+                }
+            } catch (err) {
+                showToast('Gagal membaca file backup!', 'error');
+            }
+        };
+        reader.readAsText(file);
+    });
+
+    document.getElementById('btn-reset-all').addEventListener('click', () => {
+        if (confirm('Yakin ingin menghapus semua data dan kembali ke awal?')) {
+            localStorage.removeItem(STORAGE_KEY);
+            location.reload();
+        }
+    });
+
+    // Inisialisasi Awal
+    if (state.user) {
+        runDailyAutomation();
+        initPinLock();
+    }
+    renderAll();
 });

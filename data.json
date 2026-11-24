@@ -1,43 +1,17 @@
 {
-  "isLoggedIn": false,
-  "user": {
-    "name": "User",
-    "isGuest": false
-  },
-  "settings": {
-    "lang": "id",
-    "currency": "IDR",
-    "theme": "light",
-    "hideBalance": false
-  },
-  "safeBudget": {
-    "totalBudgetIDR": 1400000,
-    "days": 14
-  },
-  "wallets": [
+  "name": "SakuPintar — Personal Finance Otomatis",
+  "short_name": "SakuPintar",
+  "description": "Aplikasi pencatat keuangan harian serba otomatis dengan Jatah Aman Harian dan Celengan Pintar.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#facc15",
+  "orientation": "portrait",
+  "icons": [
     {
-      "id": "w1",
-      "name": "Bank Utama",
-      "balanceIDR": 0,
-      "color": "from-indigo-600 to-blue-600",
-      "icon": "landmark"
-    },
-    {
-      "id": "w2",
-      "name": "E-Wallet",
-      "balanceIDR": 0,
-      "color": "from-emerald-500 to-teal-600",
-      "icon": "smartphone"
-    },
-    {
-      "id": "w3",
-      "name": "Tunai",
-      "balanceIDR": 0,
-      "color": "from-amber-500 to-orange-600",
-      "icon": "banknote"
+      "src": "https://cdn-icons-png.flaticon.com/512/2830/2830284.png",
+      "sizes": "512x512",
+      "type": "image/png"
     }
-  ],
-  "transactions": [],
-  "goals": [],
-  "debts": []
+  ]
 }
