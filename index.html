@@ -1,537 +1,661 @@
-<!DOCTYPE html>
-<html lang="id">
+﻿<!DOCTYPE html>
+<html lang="id" class="light">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fintech Expense Tracker</title>
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <!-- FontAwesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Google Fonts: Plus Jakarta Sans -->
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Custom CSS -->
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>SakuPintar — Fintech Expense Tracker</title>
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="style.css" />
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+            }
+          }
+        }
+      }
+    };
+  </script>
 </head>
-<body class="bg-gray-100 text-gray-800 font-['Plus_Jakarta_Sans'] min-h-screen flex justify-center items-center m-0 p-0 sm:p-4">
+<body class="bg-slate-100 dark:bg-slate-950 text-slate-800 dark:text-slate-100 antialiased selection:bg-indigo-500 selection:text-white transition-colors duration-300">
 
-    <!-- Mobile Wrapper Container (Responsive untuk HP & Laptop) -->
-    <div class="w-full sm:max-w-[440px] h-[100vh] sm:h-[880px] bg-white sm:rounded-[36px] sm:shadow-2xl flex flex-col relative overflow-hidden">
+  <!-- Toast Notification -->
+  <div id="toast-container" class="fixed top-4 left-1/2 -translate-x-1/2 z-[100] flex flex-col gap-2 w-[90%] max-w-sm pointer-events-none"></div>
 
-        <!-- ==================== AUTH SCREEN ==================== -->
-        <div id="authScreen" class="absolute inset-0 bg-white z-50 flex flex-col justify-between p-6 overflow-y-auto">
-            <div class="mt-8 text-center">
-                <div class="w-16 h-16 bg-indigo-600 rounded-2xl mx-auto flex items-center justify-center text-white text-2xl shadow-lg shadow-indigo-200 mb-4">
-                    <i class="fa-solid fa-wallet"></i>
-                </div>
-                <h1 id="authTitle" class="text-2xl font-bold text-gray-900">Selamat Datang</h1>
-                <p id="authSubtitle" class="text-sm text-gray-500 mt-1">Kelola keuangan Anda dengan lebih mudah & modern</p>
-            </div>
-
-            <!-- Form Container -->
-            <div class="my-auto space-y-4">
-                <!-- Login Form -->
-                <form id="loginForm" class="space-y-4">
-                    <div>
-                        <label class="block text-xs font-semibold uppercase tracking-wider text-gray-600 mb-1">Email</label>
-                        <input type="email" id="loginEmail" required class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-indigo-600 transition" placeholder="nama@email.com">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold uppercase tracking-wider text-gray-600 mb-1">Kata Sandi</label>
-                        <div class="relative">
-                            <input type="password" id="loginPassword" required class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-indigo-600 transition pr-10" placeholder="••••••••">
-                            <button type="button" onclick="togglePassword('loginPassword', 'eyeLoginIcon')" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                                <i id="eyeLoginIcon" class="fa-solid fa-eye-slash"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <button type="submit" class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl shadow-lg shadow-indigo-200 transition duration-200 mt-2">Masuk</button>
-                    <button id="btnGuest" class="btn-guest" type="button">✨ Masuk Sebagai Tamu (Guest)</button>
-                </form>
-
-                <!-- Register Form (Hidden by Default) -->
-                <form id="registerForm" class="space-y-4 hidden">
-                    <div>
-                        <label class="block text-xs font-semibold uppercase tracking-wider text-gray-600 mb-1">Nama Lengkap</label>
-                        <input type="text" id="regName" required class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-indigo-600 transition" placeholder="Nama Anda">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold uppercase tracking-wider text-gray-600 mb-1">Email</label>
-                        <input type="email" id="regEmail" required class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-indigo-600 transition" placeholder="nama@email.com">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold uppercase tracking-wider text-gray-600 mb-1">Kata Sandi</label>
-                        <div class="relative">
-                            <input type="password" id="regPassword" required class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-indigo-600 transition pr-10" placeholder="••••••••">
-                            <button type="button" onclick="togglePassword('regPassword', 'eyeRegIcon')" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                                <i id="eyeRegIcon" class="fa-solid fa-eye-slash"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <button type="submit" class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl shadow-lg shadow-indigo-200 transition duration-200 mt-2">Daftar Akun</button>
-                </form>
-            </div>
-
-            <!-- Toggle Auth Mode -->
-            <div class="text-center pb-4">
-                <p id="authToggleText" class="text-sm text-gray-500">Belum punya akun? <button type="button" onclick="switchAuthMode()" class="text-indigo-600 font-semibold hover:underline">Daftar sekarang</button></p>
-            </div>
+  <!-- AUTH / LOGIN SCREEN -->
+  <div id="auth-screen" class="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-700 dark:from-slate-900 dark:via-indigo-950 dark:to-slate-950">
+    <div class="w-full max-w-md bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl rounded-3xl shadow-2xl p-6 sm:p-8 border border-white/20 dark:border-slate-800">
+      <div class="flex justify-between items-center mb-6">
+        <div class="flex items-center gap-2.5">
+          <div class="w-10 h-10 rounded-2xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/30">
+            <i data-lucide="wallet" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h1 class="font-extrabold text-lg tracking-tight text-slate-900 dark:text-white">SakuPintar</h1>
+            <p class="text-[11px] text-slate-500 dark:text-slate-400 font-medium" data-i18n="appTagline">Smart Personal Finance</p>
+          </div>
         </div>
-
-        <!-- ==================== MAIN DASHBOARD (Hidden at Start) ==================== -->
-        <div id="mainDashboard" class="flex-1 flex flex-col h-full overflow-hidden hidden">
-
-            <!-- TAB 1: HOME -->
-            <div id="tabHome" class="flex-1 overflow-y-auto p-5 pb-28 space-y-6 fade-in">
-                <!-- Header -->
-                <div class="flex justify-between items-start gap-3">
-                    <div class="min-w-0">
-                        <h2 class="text-lg font-bold text-gray-900"><span data-i18n="welcome">Halo,</span> <span id="userNameDisplay">User</span></h2>
-                        <p id="motivationMessage" class="mt-1 text-[11px] text-gray-500"></p>
-                    </div>
-                    <div class="flex flex-col items-end gap-1">
-                        <time id="digitalClock" class="text-xs font-bold text-gray-700 tabular-nums" aria-label="Waktu saat ini">-- - -- - --</time>
-                        <label class="sr-only" for="currencySelector">Mata uang</label>
-                        <select id="currencySelector" aria-label="Pilih mata uang" class="px-2 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs font-semibold text-gray-700 focus:outline-none focus:border-indigo-600">
-                            <option value="USD">USD $</option>
-                            <option value="IDR">IDR Rp</option>
-                        </select>
-                    </div>
-                </div>
-
-                <!-- Wallet Card -->
-                <div id="walletCard" class="wallet-card card-theme-blue rounded-2xl p-5 text-white shadow-xl shadow-indigo-200 relative overflow-hidden">
-                    <div class="absolute -right-10 -bottom-10 w-36 h-36 bg-white/10 rounded-full blur-xl pointer-events-none"></div>
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <p class="text-xs font-medium text-indigo-100 uppercase tracking-wider" data-i18n="availableBalance">Available Balance</p>
-                            <h3 id="displayBalance" class="text-2xl font-bold mt-1">$0.00</h3>
-                            <p id="dailyAllowance" class="daily-allowance" aria-live="polite"></p>
-                        </div>
-                        <button onclick="toggleBalanceSensor()" class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30 transition">
-                            <i id="balanceSensorIcon" class="fa-solid fa-eye text-xs text-white"></i>
-                        </button>
-                    </div>
-                    <div class="flex justify-end items-center space-x-2 mt-4" aria-label="Pilih tema kartu">
-                        <span class="text-[10px] text-indigo-100 mr-1">Tema</span>
-                        <button type="button" data-card-theme="black" onclick="setCardTheme('black')" aria-label="Tema kartu hitam" title="Hitam" class="card-theme-swatch" style="background-color: #111827"></button>
-                        <button type="button" data-card-theme="blue" onclick="setCardTheme('blue')" aria-label="Tema kartu biru" title="Biru" class="card-theme-swatch" style="background-color: #2563eb"></button>
-                        <button type="button" data-card-theme="green" onclick="setCardTheme('green')" aria-label="Tema kartu hijau" title="Hijau" class="card-theme-swatch" style="background-color: #059669"></button>
-                        <button type="button" data-card-theme="gold" onclick="setCardTheme('gold')" aria-label="Tema kartu emas" title="Emas" class="card-theme-swatch" style="background-color: #d4a017"></button>
-                    </div>
-                    <div class="flex justify-between items-end mt-6">
-                        <div>
-                            <p id="walletCardPrimaryLabel" class="text-[10px] text-indigo-200 uppercase tracking-wider" data-i18n="cardNumber">Card Number</p>
-                            <p id="walletCardPrimaryValue" class="text-xs font-mono font-medium tracking-widest mt-0.5">**** **** **** 8766</p>
-                        </div>
-                        <div class="text-right">
-                            <p id="walletCardSecondaryLabel" class="text-[10px] text-indigo-200 uppercase tracking-wider" data-i18n="validThru">Valid Thru</p>
-                            <p id="walletCardSecondaryValue" class="text-xs font-mono font-medium">08/28</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Daily Budget -->
-                <section id="dailyBudgetCard" class="daily-budget-card bg-white border border-gray-100 rounded-2xl p-4 shadow-sm space-y-3" aria-labelledby="dailyBudgetTitle">
-                    <div class="flex justify-between items-start gap-3">
-                        <div>
-                            <h4 id="dailyBudgetTitle" class="text-sm font-bold text-gray-900" data-i18n="dailyBudgetTitle">Jatah Aman Harian</h4>
-                            <p class="mt-1 text-[11px] text-gray-500"><span data-i18n="dailyBudgetAllowance">Jatah Aman</span>: <strong id="dailyBudgetAllowance" class="font-bold">Rp 0 / hari</strong></p>
-                        </div>
-                        <label class="daily-budget-days-label shrink-0 text-[10px] font-semibold text-gray-500">
-                            <span data-i18n="targetDays">Target Hari</span>
-                            <input id="dailyBudgetDays" type="number" min="1" max="365" step="1" value="14" inputmode="numeric" class="daily-budget-days-input mt-1 w-16 rounded-lg border border-gray-200 bg-gray-50 px-2 py-1.5 text-center text-xs font-bold text-gray-700 focus:outline-none focus:border-indigo-600" aria-label="Target hari jatah aman">
-                        </label>
-                    </div>
-                    <div>
-                        <div class="flex justify-between items-center gap-2 text-[11px]">
-                            <span class="text-gray-500" data-i18n="spentToday">Terpakai hari ini</span>
-                            <strong id="dailyBudgetSpent" class="font-bold">Rp 0</strong>
-                        </div>
-                        <div class="daily-budget-track mt-2 h-2 overflow-hidden rounded-full bg-gray-100" role="progressbar" aria-label="Pengeluaran dibanding jatah harian" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-                            <div id="dailyBudgetProgress" class="h-full rounded-full transition-all duration-300" style="width: 0%; background-color: #4ade80"></div>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- Spending Breakdown -->
-                <div class="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm space-y-3">
-                    <div class="flex justify-between items-center">
-                        <h4 class="text-sm font-bold text-gray-900" data-i18n="spendingBreakdown">Spending Breakdown</h4>
-                        <span class="text-[10px] text-gray-400 bg-gray-50 px-2 py-1 rounded-md font-medium" data-i18n="thisMonth">This Month</span>
-                    </div>
-                    <div class="flex items-center space-x-4">
-                        <div class="relative w-24 h-24 flex items-center justify-center">
-                            <svg class="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
-                                <path class="text-gray-100" stroke-width="3.8" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                                <path id="homeProgressCircle" class="text-indigo-600 transition-all duration-500" stroke-dasharray="0, 100" stroke-width="3.8" stroke-linecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                            </svg>
-                            <div class="absolute text-center">
-                                <span id="homeTotalSpent" class="text-xs font-bold text-gray-800">$0</span>
-                                <p class="text-[9px] text-gray-400" data-i18n="totalSpent">Total Spent</p>
-                            </div>
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <div id="homeBreakdownList" class="space-y-1.5 text-xs"></div>
-                            <p id="categoryBudgetWarning" class="hidden mt-2 text-[10px] font-semibold text-rose-600" role="status" aria-live="polite"></p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Recent Expenses -->
-                <div>
-                    <div class="flex justify-between items-center mb-3">
-                        <h4 class="text-sm font-bold text-gray-900" data-i18n="recentTransactions">Recent Transactions</h4>
-                        <button onclick="switchTab('history')" class="text-xs font-semibold text-indigo-600 hover:underline" data-i18n="seeAll">See All</button>
-                    </div>
-                    <div id="recentExpensesList" class="space-y-2.5">
-                        <!-- Populated via JavaScript -->
-                    </div>
-                </div>
-            </div>
-
-            <!-- TAB 2: HISTORY -->
-            <div id="tabHistory" class="flex-1 overflow-y-auto p-5 pb-28 space-y-4 hidden fade-in">
-                <div class="flex justify-between items-center">
-                    <h2 class="text-lg font-bold text-gray-900" data-i18n="expensesList">Expenses List</h2>
-                    <div class="flex items-center gap-2 shrink-0">
-                        <input id="historySearchInput" type="search" data-i18n-placeholder="historySearchPlaceholder" class="hidden w-28 sm:w-36 h-9 px-3 rounded-xl bg-gray-50 border border-gray-200 text-xs focus:outline-none focus:border-indigo-600" placeholder="Cari transaksi..." aria-label="Cari nama atau kategori transaksi">
-                        <button id="historySearchToggle" type="button" onclick="toggleHistorySearch()" aria-label="Cari transaksi" title="Cari transaksi" class="w-9 h-9 rounded-xl bg-gray-50 border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-100 transition"><i class="fa-solid fa-search text-xs"></i></button>
-                        <button type="button" aria-label="Filter riwayat" title="Filter riwayat" class="w-9 h-9 rounded-xl bg-gray-50 border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-100 transition"><i class="fa-solid fa-filter text-xs"></i></button>
-                        <button id="deleteAllTransactionsButton" type="button" onclick="deleteAllTransactions()" aria-label="Hapus semua transaksi" title="Hapus semua transaksi" class="w-9 h-9 rounded-xl bg-gray-50 border border-gray-200 flex items-center justify-center text-rose-500 hover:bg-rose-50 transition"><i class="fa-solid fa-trash-can text-xs"></i></button>
-                    </div>
-                </div>
-
-                <!-- Filter Pills -->
-                <div class="flex space-x-2 overflow-x-auto hide-scrollbar pb-1">
-                    <button id="historyFilterMonth" type="button" aria-pressed="false" onclick="setHistoryFilter('month')" class="history-filter px-4 py-1.5 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded-full text-xs font-medium whitespace-nowrap transition" data-i18n="thisMonth">This Month</button>
-                    <button id="historyFilterAll" type="button" aria-pressed="true" onclick="setHistoryFilter('all')" class="history-filter px-4 py-1.5 bg-indigo-600 text-white rounded-full text-xs font-semibold whitespace-nowrap shadow-sm transition" data-i18n="allCategories">All Categories</button>
-                    <button id="historyFilterIncome" type="button" aria-pressed="false" onclick="setHistoryFilter('income')" class="history-filter px-4 py-1.5 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded-full text-xs font-medium whitespace-nowrap transition" data-i18n="income">Income</button>
-                    <button id="historyFilterExpense" type="button" aria-pressed="false" onclick="setHistoryFilter('expense')" class="history-filter px-4 py-1.5 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded-full text-xs font-medium whitespace-nowrap transition" data-i18n="expense">Expense</button>
-                    <button id="historyFilterReceivable" type="button" aria-pressed="false" onclick="setHistoryFilter('receivable')" class="history-filter px-4 py-1.5 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded-full text-xs font-medium whitespace-nowrap transition" data-i18n="receivable">Piutang</button>
-                </div>
-
-                <!-- Transaction List Grouped -->
-                <div id="fullHistoryContainer" class="space-y-4 pt-2">
-                    <!-- Populated via JavaScript -->
-                </div>
-            </div>
-
-            <!-- TAB 3: REPORT -->
-            <div id="tabReport" class="flex-1 overflow-y-auto p-5 pb-28 space-y-5 hidden fade-in">
-                <div class="flex justify-between items-center">
-                    <h2 class="text-lg font-bold text-gray-900" data-i18n="financialReport">Financial Report</h2>
-                    <span id="reportMonthYear" class="text-xs font-semibold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-lg">October 2026</span>
-                </div>
-
-                <!-- Mini Calendar -->
-                <div class="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm space-y-3">
-                    <div class="flex justify-between items-center">
-                        <span class="text-xs font-bold text-gray-800 flex items-center space-x-1.5"><i class="fa-regular fa-calendar-days text-indigo-600"></i><span id="calMonthTitle">Oct 2026</span></span>
-                        <div class="flex space-x-1 text-gray-400">
-                            <button id="calendarPrevMonth" type="button" aria-label="Bulan sebelumnya" onclick="changeCalendarMonth(-1)" class="w-6 h-6 flex items-center justify-center hover:bg-gray-100 rounded"><i class="fa-solid fa-chevron-left text-[10px]"></i></button>
-                            <button id="calendarNextMonth" type="button" aria-label="Bulan berikutnya" onclick="changeCalendarMonth(1)" class="w-6 h-6 flex items-center justify-center hover:bg-gray-100 rounded"><i class="fa-solid fa-chevron-right text-[10px]"></i></button>
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-7 text-center text-[10px] font-semibold text-gray-400">
-                        <span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span>
-                    </div>
-                    <div id="miniCalendarGrid" class="grid grid-cols-7 text-center text-xs gap-y-1.5 font-medium text-gray-700">
-                        <!-- Populated via JS -->
-                    </div>
-                </div>
-
-                <!-- Summary Cards -->
-                <div class="grid grid-cols-2 gap-3">
-                    <div class="bg-gradient-to-br from-indigo-600 to-indigo-700 rounded-2xl p-4 text-white shadow-md shadow-indigo-100">
-                        <div class="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center mb-2"><i class="fa-solid fa-wallet text-xs"></i></div>
-                        <p class="text-[10px] text-indigo-100 uppercase tracking-wider font-medium" data-i18n="totalSalary">Total Salary</p>
-                        <h4 id="reportTotalSalary" class="text-base font-bold mt-0.5">$0.00</h4>
-                        <p class="text-[9px] text-indigo-200 mt-1" data-i18n="liveUpdates">Live updates</p>
-                    </div>
-                    <div class="bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl p-4 text-white shadow-md shadow-orange-100">
-                        <div class="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center mb-2"><i class="fa-solid fa-receipt text-xs"></i></div>
-                        <p class="text-[10px] text-amber-100 uppercase tracking-wider font-medium" data-i18n="totalExpense">Total Expense</p>
-                        <h4 id="reportTotalExpense" class="text-base font-bold mt-0.5">$0.00</h4>
-                        <p class="text-[9px] text-amber-100 mt-1" data-i18n="liveUpdates">Live updates</p>
-                    </div>
-                </div>
-
-                <!-- Large Donut Chart Section -->
-                <div class="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm space-y-4">
-                    <h4 class="text-sm font-bold text-gray-900" data-i18n="expenseBreakdown">Expense Breakdown</h4>
-                    <div class="flex flex-col items-center justify-center py-2">
-                        <div class="relative w-36 h-36 flex items-center justify-center">
-                            <svg class="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
-                                <path class="text-gray-100" stroke-width="4" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                                <path id="reportProgressCircle" class="text-indigo-600 transition-all duration-500" stroke-dasharray="0, 100" stroke-width="4" stroke-linecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                            </svg>
-                            <div class="absolute text-center">
-                                <span id="reportChartCenterText" class="text-sm font-bold text-gray-800">100%</span>
-                                <p class="text-[10px] text-gray-400" data-i18n="allocated">Allocated</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div id="reportLegendList" class="space-y-2 text-xs pt-1">
-                        <!-- Populated via JS -->
-                    </div>
-                </div>
-            </div>
-
-            <!-- TAB 4: ACCOUNT -->
-            <div id="tabAccount" class="flex-1 overflow-y-auto p-5 pb-28 space-y-5 hidden fade-in">
-                <div class="flex items-center justify-between gap-3">
-                    <button type="button" id="themeToggle" onclick="toggleTheme()" aria-pressed="false" class="theme-toggle-button">
-                        <i class="fa-solid fa-moon" aria-hidden="true"></i>
-                        <span data-i18n="darkMode">Mode Gelap</span>
-                    </button>
-                    <label class="sr-only" for="languageSelector">Language</label>
-                    <select id="languageSelector" aria-label="Pilih bahasa" class="px-3 py-2 bg-white border border-gray-200 rounded-xl text-sm font-semibold text-gray-700 shadow-sm focus:outline-none focus:border-indigo-600">
-                        <option value="id">Indonesia</option>
-                        <option value="en">English</option>
-                    </select>
-                </div>
-                <div class="space-y-2">
-                    <h2 class="text-2xl font-bold text-gray-900" data-i18n="account">Account</h2>
-                    <div class="flex items-center justify-between gap-3">
-                        <div class="flex items-center gap-3 min-w-0">
-                            <div class="w-11 h-11 shrink-0 rounded-full bg-indigo-100 border border-indigo-200 text-indigo-600 font-bold flex items-center justify-center shadow-sm" id="accountAvatar">U</div>
-                            <p id="accountUserName" class="text-base font-bold text-gray-900 truncate">User</p>
-                        </div>
-                        <button type="button" onclick="logoutUser()" class="account-logout-button">
-                            <i class="fa-solid fa-right-from-bracket"></i>
-                            <span data-i18n="logout">Logout</span>
-                        </button>
-                    </div>
-                </div>
-                <div id="menu-utama-akun" class="account-menu-list" style="display: block;">
-                    <button type="button" onclick="openAccountSubpage('profilePanel')" aria-controls="profilePanel" class="account-menu-item">
-                        <span class="account-menu-icon"><i class="fa-solid fa-user"></i></span>
-                        <span class="flex-1 text-left">
-                            <span class="block text-sm font-semibold text-gray-800" data-i18n="profile">Profile</span>
-                            <span class="block text-xs text-gray-500 mt-0.5" data-i18n="profileSubtitle">View and edit your personal details</span>
-                        </span>
-                        <i class="fa-solid fa-chevron-right text-xs text-gray-400"></i>
-                    </button>
-                    <button type="button" onclick="openAccountSubpage('tileGamePanel')" class="account-menu-item">
-                        <span class="account-menu-icon"><i class="fa-solid fa-shapes"></i></span>
-                        <span class="flex-1 text-left">
-                            <span class="block text-sm font-semibold text-gray-800">Tantangan Ubin Harian</span>
-                            <span class="block text-xs text-gray-500 mt-0.5">Cocokkan ubin gratis untuk hiburan santai</span>
-                        </span>
-                        <i class="fa-solid fa-chevron-right text-xs text-gray-400"></i>
-                    </button>
-                    <button type="button" onclick="openAccountSubpage('passwordPanel')" aria-controls="passwordPanel" class="account-menu-item">
-                        <span class="account-menu-icon"><i class="fa-solid fa-lock"></i></span>
-                        <span class="flex-1 text-left">
-                            <span class="block text-sm font-semibold text-gray-800" data-i18n="changePassword">Change Password</span>
-                            <span class="block text-xs text-gray-500 mt-0.5" data-i18n="passwordSubtitle">Update your account password</span>
-                        </span>
-                        <i class="fa-solid fa-chevron-right text-xs text-gray-400"></i>
-                    </button>
-                </div>
-                <section id="profilePanel" class="account-inline-panel hidden" style="display: none;" aria-labelledby="profilePanelTitle">
-                    <button type="button" onclick="returnToAccountMenu()" class="account-back-button"><i class="fa-solid fa-arrow-left"></i><span data-i18n="back">Kembali</span></button>
-                    <h3 id="profilePanelTitle" class="text-base font-bold text-gray-900 mb-3" data-i18n="profile">Profile</h3>
-                    <p class="profile-detail-row mb-3"><span data-i18n="userId">Student ID / User ID</span><strong id="profileIdValue"></strong></p>
-                    <form id="editProfileForm" class="space-y-3">
-                        <label class="account-form-label"><span data-i18n="fullName">Full Name</span>
-                            <input id="editProfileName" type="text" required maxlength="80" class="account-form-input">
-                        </label>
-                        <label class="account-form-label"><span data-i18n="age">Age</span>
-                            <input id="editProfileAge" type="number" required min="1" max="130" step="1" inputmode="numeric" class="account-form-input">
-                        </label>
-                        <button type="submit" class="account-submit-button" data-i18n="saveChanges">Save Changes</button>
-                    </form>
-                </section>
-                <section id="tileGamePanel" class="account-inline-panel hidden" style="display: none;" aria-labelledby="tileGameTitle">
-                    <button type="button" onclick="returnToAccountMenu()" class="account-back-button"><i class="fa-solid fa-arrow-left"></i><span data-i18n="back">Kembali</span></button>
-                    <h3 id="tileGameTitle" class="text-base font-bold text-gray-900 mb-2">Tantangan Ubin Harian</h3>
-                    <p class="tile-game-disclaimer">Tantangan ubin orisinal untuk hiburan. Putaran gratis dan skor hanya demo; tidak ada taruhan, uang, atau hadiah.</p>
-                    <div class="tile-game-shell">
-                        <div class="tile-game-multipliers" id="tileGameMultipliers" aria-label="Pengali skor">
-                            <span class="tile-game-multiplier is-active" data-multiplier="1">x1</span>
-                            <span class="tile-game-multiplier" data-multiplier="2">x2</span>
-                            <span class="tile-game-multiplier" data-multiplier="3">x3</span>
-                            <span class="tile-game-multiplier" data-multiplier="5">x5</span>
-                        </div>
-                        <div id="tileGameBoard" class="tile-game-board" role="group" aria-label="Papan tantangan ubin" aria-live="polite">
-                            <div class="tile-game-cell" aria-label="Naga Hijau">發</div>
-                            <div class="tile-game-cell" aria-label="Naga Merah">中</div>
-                            <div class="tile-game-cell" aria-label="Naga Putih">白</div>
-                            <div class="tile-game-cell" aria-label="Kucing Emas">貓</div>
-                            <div class="tile-game-cell" aria-label="Batangan Emas">金</div>
-                            <div class="tile-game-cell" aria-label="Ubin Delapan">八</div>
-                            <div class="tile-game-cell" aria-label="Naga Hijau">發</div>
-                            <div class="tile-game-cell" aria-label="Naga Merah">中</div>
-                            <div class="tile-game-cell" aria-label="Naga Putih">白</div>
-                            <div class="tile-game-cell" aria-label="Kucing Emas">貓</div>
-                            <div class="tile-game-cell" aria-label="Batangan Emas">金</div>
-                            <div class="tile-game-cell" aria-label="Ubin Delapan">八</div>
-                            <div class="tile-game-cell" aria-label="Naga Hijau">發</div>
-                            <div class="tile-game-cell" aria-label="Naga Merah">中</div>
-                            <div class="tile-game-cell" aria-label="Naga Putih">白</div>
-                            <div class="tile-game-cell" aria-label="Kucing Emas">貓</div>
-                            <div class="tile-game-cell" aria-label="Batangan Emas">金</div>
-                            <div class="tile-game-cell" aria-label="Ubin Delapan">八</div>
-                            <div class="tile-game-cell" aria-label="Naga Hijau">發</div>
-                            <div class="tile-game-cell" aria-label="Naga Merah">中</div>
-                        </div>
-                        <div class="tile-game-metrics" aria-live="polite">
-                            <div><span>POIN DEMO</span><strong id="tileGameDemoBalance">1.000</strong></div>
-                            <div><span>BIAYA PUTAR</span><strong id="tileGameDemoBet">0</strong></div>
-                            <div class="tile-game-score"><span>SKOR HIBURAN</span><strong id="tileGameWin">0</strong></div>
-                        </div>
-                        <div class="tile-game-spin-area">
-                            <button id="tileGameTurboButton" type="button" onclick="toggleTileGameTurbo()" class="tile-game-turbo-button" aria-pressed="false">
-                                MODE: NORMAL
-                            </button>
-                            <button id="tileGameSpinButton" type="button" onclick="spinTileGame()" class="tile-game-spin-button" aria-label="Putar ubin gratis">
-                                <i class="fa-solid fa-rotate" aria-hidden="true"></i>
-                                <span id="tileGameSpinLabel">PUTAR GRATIS</span>
-                            </button>
-                        </div>
-                    </div>
-                    <p id="tileGameMessage" class="min-h-10 mt-3 text-center text-sm font-semibold text-gray-700" role="status" aria-live="polite">Tekan tombol untuk memulai tantangan gratis.</p>
-                </section>
-                <section id="passwordPanel" class="account-inline-panel hidden" style="display: none;" aria-labelledby="passwordPanelTitle">
-                    <button type="button" onclick="returnToAccountMenu()" class="account-back-button"><i class="fa-solid fa-arrow-left"></i><span data-i18n="back">Kembali</span></button>
-                    <h3 id="passwordPanelTitle" class="text-base font-bold text-gray-900 mb-3" data-i18n="changePassword">Change Password</h3>
-                    <form id="passwordForm" class="space-y-3">
-                        <label class="account-form-label"><span data-i18n="currentPassword">Current Password</span>
-                            <input id="currentPassword" type="password" required autocomplete="current-password" class="account-form-input">
-                        </label>
-                        <label class="account-form-label"><span data-i18n="newPassword">New Password</span>
-                            <input id="newPassword" type="password" required minlength="6" autocomplete="new-password" class="account-form-input">
-                        </label>
-                        <label class="account-form-label"><span data-i18n="confirmPassword">Confirm New Password</span>
-                            <input id="confirmNewPassword" type="password" required minlength="6" autocomplete="new-password" class="account-form-input">
-                        </label>
-                        <p id="passwordFormMessage" class="hidden text-xs font-medium" role="status"></p>
-                        <button type="submit" class="account-submit-button" data-i18n="updatePassword">Update Password</button>
-                    </form>
-                </section>
-            </div>
-
-            <!-- Floating Bottom Navigation Bar -->
-            <div class="absolute bottom-4 left-4 right-4 z-40">
-                <div class="bottom-navigation bg-[#1F2937]/95 backdrop-blur-md rounded-2xl px-4 py-2.5 flex justify-between items-center shadow-2xl border border-white/10">
-                    <button onclick="switchTab('home')" id="navHome" class="flex flex-col items-center space-y-1 text-indigo-400 transition">
-                        <i class="fa-solid fa-house text-sm"></i>
-                        <span class="text-[9px] font-medium" data-i18n="home">Home</span>
-                    </button>
-                    <button onclick="switchTab('history')" id="navHistory" class="flex flex-col items-center space-y-1 text-gray-400 hover:text-white transition">
-                        <i class="fa-solid fa-clock-rotate-left text-sm"></i>
-                        <span class="text-[9px] font-medium" data-i18n="history">History</span>
-                    </button>
-                    <!-- Floating Center Action Button -->
-                    <button onclick="openTransactionModal('expense')" class="w-12 h-12 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full flex items-center justify-center shadow-lg shadow-indigo-600/50 transform -translate-y-3 transition hover:scale-105 active:scale-95">
-                        <i class="fa-solid fa-plus text-base"></i>
-                    </button>
-                    <button onclick="switchTab('report')" id="navReport" class="flex flex-col items-center space-y-1 text-gray-400 hover:text-white transition">
-                        <i class="fa-solid fa-chart-pie text-sm"></i>
-                        <span class="text-[9px] font-medium" data-i18n="report">Report</span>
-                    </button>
-                    <button onclick="switchTab('account')" id="navAccount" class="flex flex-col items-center space-y-1 text-gray-400 hover:text-white transition">
-                        <i class="fa-solid fa-user-gear text-sm"></i>
-                        <span class="text-[9px] font-medium" data-i18n="account">Account</span>
-                    </button>
-                </div>
-            </div>
+        <div class="flex items-center gap-1.5">
+          <button onclick="toggleLanguage()" class="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition">
+            <span id="auth-lang-label">ID</span>
+          </button>
+          <button onclick="toggleTheme()" class="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition">
+            <i data-lucide="moon" class="w-4 h-4 dark:hidden"></i>
+            <i data-lucide="sun" class="w-4 h-4 hidden dark:block text-amber-400"></i>
+          </button>
         </div>
+      </div>
 
-        <!-- ==================== TRANSACTION MODAL ==================== -->
-        <div id="transactionModal" class="absolute inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end justify-center hidden transition-opacity">
-            <div class="bg-white w-full rounded-t-[32px] p-6 space-y-5 animate-slide-up max-h-[85vh] overflow-y-auto">
-                <div class="flex justify-between items-center border-b border-gray-100 pb-3">
-                    <h3 id="modalTitle" class="text-base font-bold text-gray-900" data-i18n="transactionTitle">Add New Transaction</h3>
-                    <button onclick="closeTransactionModal()" class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-200"><i class="fa-solid fa-xmark text-sm"></i></button>
-                </div>
+      <div class="mb-6">
+        <h2 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white leading-tight" data-i18n="authHeadline">Kelola Uang Lebih Cerdas</h2>
+        <p class="mt-2 text-sm leading-relaxed text-slate-500 dark:text-slate-400" data-i18n="authDescription">Atur pengeluaran, jaga anggaran harian, dan capai target masa depan dalam satu tempat.</p>
+      </div>
 
-                <!-- Type Selector Tabs -->
-                <div class="grid grid-cols-4 gap-2 bg-gray-100 p-1 rounded-xl">
-                    <button type="button" id="typeIncomeBtn" onclick="setModalType('income')" data-i18n="income" aria-pressed="false" class="transaction-type-button py-2 text-xs font-semibold rounded-lg text-gray-500 transition">Income</button>
-                    <button type="button" id="typeExpenseBtn" onclick="setModalType('expense')" data-i18n="expense" aria-pressed="true" class="transaction-type-button py-2 text-xs font-semibold rounded-lg bg-indigo-600 text-white shadow-sm transition">Expense</button>
-                    <button type="button" id="typeSavingsGoalBtn" onclick="setModalType('savingsGoal')" data-i18n="savingsGoal" aria-pressed="false" class="transaction-type-button py-2 text-xs font-semibold rounded-lg text-gray-500 transition">Target Nabung</button>
-                    <button type="button" id="typeReceivableBtn" onclick="setModalType('receivable')" data-i18n="receivable" aria-pressed="false" class="transaction-type-button py-2 text-xs font-semibold rounded-lg text-gray-500 transition">Piutang</button>
-                </div>
+      <!-- Auth Tabs -->
+      <div class="grid grid-cols-2 gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-2xl mb-6" role="tablist">
+        <button type="button" id="tab-login-btn" role="tab" aria-selected="true" onclick="switchAuthTab('login')" class="auth-tab is-active py-2 text-xs font-bold rounded-xl shadow-sm transition" data-i18n="loginTab">Masuk</button>
+        <button type="button" id="tab-register-btn" role="tab" aria-selected="false" onclick="switchAuthTab('register')" class="auth-tab py-2 text-xs font-bold rounded-xl shadow-sm transition" data-i18n="registerTab">Daftar Akun</button>
+      </div>
 
-                <form id="transactionForm" onsubmit="handleTransactionSubmit(event)" class="space-y-4">
-                    <input type="hidden" id="txType" value="expense">
-                    <input type="hidden" id="editingTransactionIndex" value="">
-                    <div id="transactionAmountFields">
-                        <label class="block text-xs font-semibold uppercase tracking-wider text-gray-600 mb-1"><span data-i18n="amount">Amount</span> (<span id="txCurrencyLabel">$</span>)</label>
-                        <div class="flex items-center gap-2">
-                            <input type="text" inputmode="decimal" id="txAmount" required class="min-w-0 flex-1 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-indigo-600 font-semibold" placeholder="0.00">
-                            <button type="button" onclick="openCalculator()" aria-label="Open amount calculator" title="Open calculator" data-i18n-aria-label="calculator" class="w-12 h-12 shrink-0 bg-gray-900 hover:bg-gray-800 text-white rounded-xl text-xl transition active:scale-95">🧮</button>
-                        </div>
-                    </div>
-                    <div id="transactionTitleField">
-                        <label class="block text-xs font-semibold uppercase tracking-wider text-gray-600 mb-1" data-i18n="transactionName">Transaction Name</label>
-                        <input type="text" id="txTitle" required class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-indigo-600" placeholder="Contoh: Belanja Bulanan / Gaji">
-                    </div>
-                    <div id="transactionCategoryField">
-                        <label class="block text-xs font-semibold uppercase tracking-wider text-gray-600 mb-1" data-i18n="category">Category</label>
-                        <select id="txCategory" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-indigo-600">
-                        </select>
-                    </div>
-                    <div id="transactionPaymentMethodField">
-                        <label for="txPaymentMethod" class="block text-xs font-semibold uppercase tracking-wider text-gray-600 mb-1" data-i18n="paymentMethod">Payment Method</label>
-                        <select id="txPaymentMethod" required class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-indigo-600"></select>
-                    </div>
-                    <div id="savingsGoalFields" class="hidden space-y-4">
-                        <div>
-                            <label for="savingsGoalName" class="block text-xs font-semibold uppercase tracking-wider text-gray-600 mb-1" data-i18n="savingsGoalName">Nama Target</label>
-                            <input type="text" id="savingsGoalName" maxlength="80" placeholder="Contoh: Beli Laptop / Liburan" data-i18n-placeholder="savingsGoalPlaceholder" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-indigo-600">
-                        </div>
-                        <div>
-                            <label for="savingsGoalAmount" class="block text-xs font-semibold uppercase tracking-wider text-gray-600 mb-1" data-i18n="savingsGoalAmount">Nominal Target (Rp)</label>
-                            <input type="text" inputmode="numeric" id="savingsGoalAmount" placeholder="Contoh: 5.000.000" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-indigo-600">
-                        </div>
-                    </div>
-                    <button type="submit" class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl shadow-lg shadow-indigo-200 transition" data-i18n="saveTransaction">Save Transaction</button>
-                </form>
-            </div>
-
-            <div id="calculatorModal" class="calculator-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="calculatorTitle">
-                <div class="calculator-panel" onclick="event.stopPropagation()">
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 id="calculatorTitle" class="text-sm font-semibold text-gray-300" data-i18n="calculator">Amount Calculator</h3>
-                        <button type="button" onclick="closeCalculator()" aria-label="Close" data-i18n-aria-label="close" class="calculator-close">×</button>
-                    </div>
-                    <div class="calculator-screen" aria-live="polite">
-                        <div id="calculatorExpression" class="calculator-expression"></div>
-                        <div id="calculatorDisplay" class="calculator-display">0</div>
-                    </div>
-                    <div class="calculator-keys">
-                        <button type="button" onclick="calculatorInput('AC')" class="calculator-key calculator-key-muted">AC</button>
-                        <button type="button" onclick="calculatorInput('±')" class="calculator-key calculator-key-muted">±</button>
-                        <button type="button" onclick="calculatorInput('%')" class="calculator-key calculator-key-muted">%</button>
-                        <button type="button" onclick="calculatorInput('/')" aria-label="Bagi" class="calculator-key calculator-key-operator">÷</button>
-                        <button type="button" onclick="calculatorInput('7')" class="calculator-key">7</button>
-                        <button type="button" onclick="calculatorInput('8')" class="calculator-key">8</button>
-                        <button type="button" onclick="calculatorInput('9')" class="calculator-key">9</button>
-                        <button type="button" onclick="calculatorInput('*')" aria-label="Kali" class="calculator-key calculator-key-operator">×</button>
-                        <button type="button" onclick="calculatorInput('4')" class="calculator-key">4</button>
-                        <button type="button" onclick="calculatorInput('5')" class="calculator-key">5</button>
-                        <button type="button" onclick="calculatorInput('6')" class="calculator-key">6</button>
-                        <button type="button" onclick="calculatorInput('-')" aria-label="Kurang" class="calculator-key calculator-key-operator">−</button>
-                        <button type="button" onclick="calculatorInput('1')" class="calculator-key">1</button>
-                        <button type="button" onclick="calculatorInput('2')" class="calculator-key">2</button>
-                        <button type="button" onclick="calculatorInput('3')" class="calculator-key">3</button>
-                        <button type="button" onclick="calculatorInput('+')" aria-label="Tambah" class="calculator-key calculator-key-operator">+</button>
-                        <button type="button" onclick="calculatorInput('⌫')" aria-label="Hapus angka terakhir" class="calculator-key calculator-key-muted">⌫</button>
-                        <button type="button" onclick="calculatorInput('0')" class="calculator-key">0</button>
-                        <button type="button" onclick="calculatorInput('.')" class="calculator-key">.</button>
-                        <button type="button" onclick="calculatorInput('=')" aria-label="Hitung dan gunakan hasil" class="calculator-key calculator-key-equals">=</button>
-                    </div>
-                </div>
-            </div>
+      <form id="auth-form" onsubmit="handleAuthSubmit(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5" data-i18n="fullName">Nama Lengkap</label>
+          <input type="text" id="auth-name" required autocomplete="name" placeholder="Contoh: Amjad" data-i18n-placeholder="namePlaceholder" class="w-full px-4 py-3 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
         </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5" data-i18n="pinPassword">PIN / Kata Sandi</label>
+          <input type="password" id="auth-pass" required autocomplete="current-password" placeholder="Masukkan PIN atau kata sandi" data-i18n-placeholder="passwordPlaceholder" class="w-full px-4 py-3 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+        </div>
+        <button type="submit" id="auth-submit-btn" class="auth-primary w-full py-3.5 rounded-2xl font-bold text-sm shadow-lg shadow-amber-500/30 transition active:scale-[0.98]" data-i18n="loginBtn">Masuk ke Akun</button>
+      </form>
 
+      <div class="relative my-6">
+        <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-slate-200 dark:border-slate-800"></div></div>
+        <div class="relative flex justify-center text-xs"><span class="px-3 bg-white dark:bg-slate-900 text-slate-400 font-medium" data-i18n="orText">atau</span></div>
+      </div>
+
+      <button onclick="loginAsGuest()" class="auth-guest w-full py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition active:scale-[0.98]">
+        <i data-lucide="sparkles" class="w-4 h-4 text-amber-500"></i>
+        <span data-i18n="guestBtn">Masuk sebagai Tamu (Tanpa Ribet)</span>
+      </button>
     </div>
+  </div>
 
-    <!-- JavaScript File -->
-    <script src="app.js"></script>
+  <!-- MAIN APP CONTAINER -->
+  <div id="main-app" class="hidden min-h-screen max-w-md mx-auto bg-slate-50 dark:bg-slate-950 shadow-2xl relative pb-28">
+    
+    <!-- ==================== PAGE 1: HOME ==================== -->
+    <section id="page-home" class="page-section space-y-5">
+      <!-- Top Header & Net Worth Card -->
+      <div class="bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-700 dark:from-indigo-950 dark:via-slate-900 dark:to-slate-900 text-white pt-6 pb-8 px-5 rounded-b-[2rem] shadow-lg">
+        <div class="flex items-center justify-between mb-6">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center font-bold text-sm border border-white/30" id="header-avatar">U</div>
+            <div>
+              <p class="text-xs text-indigo-100 dark:text-slate-400" id="greeting-text">Selamat Pagi,</p>
+              <h2 class="font-bold text-base tracking-tight" id="header-username">User</h2>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="toggleCurrency()" class="px-2.5 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 backdrop-blur-md text-xs font-bold transition border border-white/10" data-i18n-title="switchCurrency">
+              <span id="header-currency-badge">IDR (Rp)</span>
+            </button>
+            <button onclick="toggleLanguage()" class="px-2.5 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 backdrop-blur-md text-xs font-bold transition border border-white/10" data-i18n-title="switchLanguage">
+              <span id="header-lang-badge">ID</span>
+            </button>
+            <button onclick="toggleTheme()" class="p-2 rounded-xl bg-white/15 hover:bg-white/25 backdrop-blur-md transition border border-white/10" data-i18n-title="switchTheme">
+              <i data-lucide="moon" class="w-4 h-4 dark:hidden"></i>
+              <i data-lucide="sun" class="w-4 h-4 hidden dark:block text-amber-300"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Net Worth Display -->
+        <div class="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/15">
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-xs font-medium text-indigo-100 dark:text-slate-300" data-i18n="netWorth">Total Kekayaan Bersih</span>
+            <button onclick="toggleHideBalance()" class="p-1.5 rounded-lg hover:bg-white/15 transition" aria-label="Toggle Balance Visibility">
+              <i id="eye-icon-show" data-lucide="eye" class="w-4 h-4"></i>
+              <i id="eye-icon-hide" data-lucide="eye-off" class="w-4 h-4 hidden"></i>
+            </button>
+          </div>
+          <div class="text-2xl sm:text-3xl font-extrabold tracking-tight my-1" id="net-worth-amount">Rp 0</div>
+          <div class="grid grid-cols-2 gap-3 mt-4 pt-3 border-t border-white/15 text-xs">
+            <div class="flex items-center gap-2">
+              <div class="w-7 h-7 rounded-xl bg-emerald-400/20 flex items-center justify-center text-emerald-300">
+                <i data-lucide="arrow-down-left" class="w-4 h-4"></i>
+              </div>
+              <div>
+                <p class="text-[10px] text-indigo-100/80" data-i18n="monthIncome">Pemasukan Bulan Ini</p>
+                <p class="font-bold text-emerald-300" id="home-month-income">Rp 0</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <div class="w-7 h-7 rounded-xl bg-rose-400/20 flex items-center justify-center text-rose-300">
+                <i data-lucide="arrow-up-right" class="w-4 h-4"></i>
+              </div>
+              <div>
+                <p class="text-[10px] text-indigo-100/80" data-i18n="monthExpense">Pengeluaran Bulan Ini</p>
+                <p class="font-bold text-rose-300" id="home-month-expense">Rp 0</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Wallets Horizontal Scroll -->
+      <div class="px-5">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="font-bold text-sm text-slate-800 dark:text-slate-100" data-i18n="myWallets">Dompet Saya</h3>
+          <button onclick="openAddWalletModal()" class="text-xs font-bold text-indigo-600 dark:text-indigo-400 flex items-center gap-1 hover:underline">
+            <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
+            <span data-i18n="addWallet">Tambah Dompet</span>
+          </button>
+        </div>
+        <div id="wallets-carousel" class="flex gap-3 overflow-x-auto no-scrollbar pb-1">
+          <!-- Wallets rendered dynamically -->
+        </div>
+      </div>
+
+      <!-- Hero Feature: Jatah Aman Harian (Daily Safe-to-Spend) -->
+      <div class="px-5">
+        <div class="bg-white dark:bg-slate-900 rounded-3xl p-5 shadow-sm border border-slate-200/70 dark:border-slate-800">
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center gap-2">
+              <div class="w-8 h-8 rounded-xl bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                <i data-lucide="shield-check" class="w-4 h-4"></i>
+              </div>
+              <div>
+                <h3 class="font-bold text-sm" data-i18n="dailySafeTitle">Jatah Aman Harian</h3>
+                <p class="text-[11px] text-slate-500 dark:text-slate-400" id="daily-safe-subtitle">Target 14 hari</p>
+              </div>
+            </div>
+            <button onclick="openSafeBudgetModal()" class="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1 transition">
+              <i data-lucide="sliders-horizontal" class="w-3.5 h-3.5"></i>
+              <span data-i18n="setBtn">Atur</span>
+            </button>
+          </div>
+
+          <div class="flex items-end justify-between mb-2">
+            <div>
+              <p class="text-[11px] text-slate-500 dark:text-slate-400" data-i18n="remainingToday">Sisa Jatah Hari Ini</p>
+              <p class="text-xl font-extrabold tracking-tight" id="daily-safe-remaining">Rp 100.000</p>
+            </div>
+            <div class="text-right">
+              <span id="daily-safe-badge" class="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400">Aman</span>
+              <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+                <span data-i18n="spentToday">Terpakai:</span> <strong id="daily-safe-spent" class="text-slate-700 dark:text-slate-200">Rp 0</strong> / <span id="daily-safe-limit">Rp 100.000</span>
+              </p>
+            </div>
+          </div>
+
+          <!-- Dynamic Color Progress Bar -->
+          <div class="w-full h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+            <div id="daily-safe-bar" class="h-full bg-emerald-500 rounded-full transition-all duration-500" style="width: 0%"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent 5 Transactions -->
+      <div class="px-5">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="font-bold text-sm text-slate-800 dark:text-slate-100" data-i18n="recentTransactions">5 Transaksi Terakhir</h3>
+          <button onclick="navigateTo('history')" class="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline" data-i18n="seeAll">Lihat Semua</button>
+        </div>
+        <div id="home-recent-list" class="space-y-2.5">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== PAGE 2: HISTORY ==================== -->
+    <section id="page-history" class="page-section hidden p-5 space-y-4">
+      <div class="flex items-center justify-between">
+        <h2 class="text-xl font-extrabold tracking-tight" data-i18n="historyTitle">Riwayat Transaksi</h2>
+        <span id="history-count-badge" class="px-2.5 py-1 rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 text-xs font-bold">0</span>
+      </div>
+
+      <!-- Search Bar -->
+      <div class="relative">
+        <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+        <input type="text" id="history-search" oninput="renderHistory()" placeholder="Cari nama transaksi..." class="w-full pl-10 pr-4 py-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+      </div>
+
+      <!-- Multi Filters -->
+      <div class="grid grid-cols-3 gap-2">
+        <select id="filter-month" onchange="renderHistory()" class="px-3 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-semibold focus:outline-none">
+          <option value="all" data-i18n="allMonths">Semua Bulan</option>
+        </select>
+        <select id="filter-type" onchange="renderHistory()" class="px-3 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-semibold focus:outline-none">
+          <option value="all" data-i18n="allTypes">Semua Tipe</option>
+          <option value="expense" data-i18n="expense">Pengeluaran</option>
+          <option value="income" data-i18n="income">Pemasukan</option>
+          <option value="transfer" data-i18n="transfer">Transfer</option>
+        </select>
+        <select id="filter-wallet" onchange="renderHistory()" class="px-3 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-semibold focus:outline-none">
+          <option value="all" data-i18n="allWallets">Semua Dompet</option>
+        </select>
+      </div>
+
+      <!-- Grouped Transactions List -->
+      <div id="history-grouped-list" class="space-y-5 pt-1">
+        <!-- Rendered dynamically -->
+      </div>
+    </section>
+
+    <!-- ==================== PAGE 3: GOALS & DEBTS ==================== -->
+    <section id="page-goals" class="page-section hidden p-5 space-y-5">
+      <div class="flex items-center justify-between">
+        <h2 class="text-xl font-extrabold tracking-tight" data-i18n="goalsDebtsTitle">Target & Piutang</h2>
+      </div>
+
+      <!-- Sub-tabs: Saving Goals vs Receivables -->
+      <div class="grid grid-cols-2 gap-1.5 p-1 bg-slate-200/70 dark:bg-slate-900 rounded-2xl">
+        <button id="subtab-goals-btn" onclick="switchGoalsTab('goals')" class="py-2.5 text-xs font-bold rounded-xl bg-white dark:bg-slate-800 text-indigo-600 dark:text-white shadow-sm transition" data-i18n="savingGoalsTab">Target Nabung</button>
+        <button id="subtab-debts-btn" onclick="switchGoalsTab('debts')" class="py-2.5 text-xs font-bold rounded-xl text-slate-500 dark:text-slate-400 transition" data-i18n="receivablesTab">Catatan Piutang</button>
+      </div>
+
+      <!-- TAB 1: SAVING GOALS -->
+      <div id="goals-panel" class="space-y-4">
+        <button onclick="openAddGoalModal()" class="w-full py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md shadow-indigo-500/20 transition">
+          <i data-lucide="target" class="w-4 h-4"></i>
+          <span data-i18n="newGoalBtn">+ Buat Target Nabung Baru</span>
+        </button>
+        <div id="goals-list" class="space-y-3"></div>
+      </div>
+
+      <!-- TAB 2: RECEIVABLES (PIUTANG) -->
+      <div id="debts-panel" class="hidden space-y-4">
+        <button onclick="openAddDebtModal()" class="w-full py-3 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md shadow-amber-500/20 transition">
+          <i data-lucide="hand-coins" class="w-4 h-4"></i>
+          <span data-i18n="newDebtBtn">+ Catat Piutang Baru</span>
+        </button>
+        <div id="debts-list" class="space-y-3"></div>
+      </div>
+    </section>
+
+    <!-- ==================== PAGE 4: REPORT & ACCOUNT ==================== -->
+    <section id="page-report" class="page-section hidden p-5 space-y-5">
+      <div class="flex items-center justify-between">
+        <h2 class="text-xl font-extrabold tracking-tight" data-i18n="reportAccountTitle">Laporan & Akun</h2>
+        <select id="report-month-select" onchange="renderReport()" class="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-bold focus:outline-none"></select>
+      </div>
+
+      <!-- Monthly Income vs Expense Comparison -->
+      <div class="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200/70 dark:border-slate-800 shadow-sm space-y-4">
+        <h3 class="font-bold text-sm" data-i18n="monthlySummary">Ringkasan Keuangan Bulanan</h3>
+        <div class="grid grid-cols-2 gap-3">
+          <div class="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/50 dark:border-emerald-900/50">
+            <p class="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400" data-i18n="totalIncome">Total Pemasukan</p>
+            <p class="text-base font-extrabold text-emerald-600 dark:text-emerald-300 mt-1" id="report-income">Rp 0</p>
+          </div>
+          <div class="p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200/50 dark:border-rose-900/50">
+            <p class="text-[11px] font-semibold text-rose-700 dark:text-rose-400" data-i18n="totalExpense">Total Pengeluaran</p>
+            <p class="text-base font-extrabold text-rose-600 dark:text-rose-300 mt-1" id="report-expense">Rp 0</p>
+          </div>
+        </div>
+        <!-- Comparison Bar -->
+        <div>
+          <div class="flex justify-between text-[11px] font-semibold text-slate-500 mb-1">
+            <span data-i18n="cashflowRatio">Rasio Arus Kas</span>
+            <span id="report-net-diff">Rp 0</span>
+          </div>
+          <div class="w-full h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden flex">
+            <div id="report-income-bar" class="bg-emerald-500 h-full transition-all duration-500" style="width: 50%"></div>
+            <div id="report-expense-bar" class="bg-rose-500 h-full transition-all duration-500" style="width: 50%"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Category Breakdown -->
+      <div class="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200/70 dark:border-slate-800 shadow-sm space-y-3">
+        <h3 class="font-bold text-sm" data-i18n="expenseByCategory">Pengeluaran per Kategori</h3>
+        <div id="category-breakdown-list" class="space-y-3"></div>
+      </div>
+
+      <!-- Account Settings -->
+      <div class="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200/70 dark:border-slate-800 shadow-sm space-y-4">
+        <h3 class="font-bold text-sm" data-i18n="accountSettings">Pengaturan Akun</h3>
+        <div class="space-y-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1" data-i18n="profileName">Nama Profil</label>
+            <div class="flex gap-2">
+              <input type="text" id="settings-username-input" class="flex-1 px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-medium focus:outline-none" />
+              <button onclick="updateProfileName()" class="px-4 py-2.5 rounded-xl bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 transition" data-i18n="saveBtn">Simpan</button>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-3 pt-1">
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 mb-1" data-i18n="currencyLabel">Mata Uang Utama</label>
+              <select id="settings-currency-select" onchange="setCurrency(this.value)" class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold">
+                <option value="IDR">IDR (Rp)</option>
+                <option value="USD">USD ($)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 mb-1" data-i18n="languageLabel">Bahasa Aplikasi</label>
+              <select id="settings-lang-select" onchange="setLanguage(this.value)" class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold">
+                <option value="id">Indonesia (ID)</option>
+                <option value="en">English (EN)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Data Management -->
+      <div class="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200/70 dark:border-slate-800 shadow-sm space-y-3">
+        <h3 class="font-bold text-sm" data-i18n="dataManagement">Manajemen Data</h3>
+        <div class="grid grid-cols-1 gap-2.5">
+          <button onclick="exportToCSV()" class="w-full py-3 px-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 font-bold text-xs flex items-center justify-between transition">
+            <span class="flex items-center gap-2"><i data-lucide="file-spreadsheet" class="w-4 h-4"></i> <span data-i18n="exportCsvBtn">Export Laporan ke CSV / Excel</span></span>
+            <i data-lucide="download" class="w-4 h-4"></i>
+          </button>
+          <button onclick="backupJSON()" class="w-full py-3 px-4 rounded-2xl bg-indigo-50 dark:bg-indigo-950/50 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 font-bold text-xs flex items-center justify-between transition">
+            <span class="flex items-center gap-2"><i data-lucide="database-backup" class="w-4 h-4"></i> <span data-i18n="backupJsonBtn">Backup Data (Download JSON)</span></span>
+            <i data-lucide="download" class="w-4 h-4"></i>
+          </button>
+          <label class="w-full py-3 px-4 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs flex items-center justify-between cursor-pointer transition">
+            <span class="flex items-center gap-2"><i data-lucide="upload" class="w-4 h-4"></i> <span data-i18n="restoreJsonBtn">Restore Data (Upload JSON)</span></span>
+            <input type="file" accept=".json" onchange="restoreJSON(event)" class="hidden" />
+            <i data-lucide="folder-open" class="w-4 h-4"></i>
+          </label>
+          <button onclick="openResetModal()" class="w-full py-3 px-4 rounded-2xl bg-rose-50 dark:bg-rose-950/50 hover:bg-rose-100 dark:hover:bg-rose-900/50 text-rose-600 dark:text-rose-400 font-bold text-xs flex items-center justify-between transition">
+            <span class="flex items-center gap-2"><i data-lucide="trash-2" class="w-4 h-4"></i> <span data-i18n="resetDataBtn">Reset Semua Data</span></span>
+            <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Logout -->
+      <button onclick="logout()" class="w-full py-3.5 rounded-2xl bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs flex items-center justify-center gap-2 transition">
+        <i data-lucide="log-out" class="w-4 h-4"></i>
+        <span data-i18n="logoutBtn">Keluar Akun (Logout)</span>
+      </button>
+    </section>
+
+    <!-- ==================== BOTTOM NAVIGATION BAR ==================== -->
+    <nav class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white/95 dark:bg-slate-900/95 backdrop-blur-lg border-t border-slate-200 dark:border-slate-800 px-3 py-2 z-40">
+      <div class="grid grid-cols-5 items-center text-center">
+        <button onclick="navigateTo('home')" id="nav-home" class="nav-item flex flex-col items-center justify-center py-1 text-indigo-600 dark:text-indigo-400">
+          <i data-lucide="home" class="w-5 h-5 mb-0.5"></i>
+          <span class="text-[10px] font-bold" data-i18n="navHome">Beranda</span>
+        </button>
+        <button onclick="navigateTo('history')" id="nav-history" class="nav-item flex flex-col items-center justify-center py-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+          <i data-lucide="receipt-text" class="w-5 h-5 mb-0.5"></i>
+          <span class="text-[10px] font-semibold" data-i18n="navHistory">Riwayat</span>
+        </button>
+        <!-- Center Quick Action (+) -->
+        <div class="flex justify-center -mt-7">
+          <button onclick="openTransactionModal()" class="w-14 h-14 rounded-full bg-gradient-to-tr from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white shadow-xl shadow-indigo-500/40 flex items-center justify-center transition transform active:scale-90 border-4 border-slate-50 dark:border-slate-950" data-i18n-title="addTransaction" data-i18n-aria-label="addTransaction">
+            <i data-lucide="plus" class="w-7 h-7 stroke-[2.5]"></i>
+          </button>
+        </div>
+        <button onclick="navigateTo('goals')" id="nav-goals" class="nav-item flex flex-col items-center justify-center py-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+          <i data-lucide="piggy-bank" class="w-5 h-5 mb-0.5"></i>
+          <span class="text-[10px] font-semibold" data-i18n="navGoals">Target</span>
+        </button>
+        <button onclick="navigateTo('report')" id="nav-report" class="nav-item flex flex-col items-center justify-center py-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+          <i data-lucide="pie-chart" class="w-5 h-5 mb-0.5"></i>
+          <span class="text-[10px] font-semibold" data-i18n="navReport">Laporan</span>
+        </button>
+      </div>
+    </nav>
+  </div>
+
+  <!-- ==================== MODAL 1: ADD TRANSACTION + CALCULATOR ==================== -->
+  <div id="tx-modal" class="fixed inset-0 z-50 hidden bg-slate-950/60 backdrop-blur-sm flex items-end sm:items-center justify-center">
+    <div class="w-full max-w-md bg-white dark:bg-slate-900 rounded-t-[2rem] sm:rounded-3xl p-5 max-h-[94vh] overflow-y-auto shadow-2xl border border-slate-200 dark:border-slate-800 animate-slide-up">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-extrabold text-base" data-i18n="addTxTitle">Catat Transaksi Cepat</h3>
+        <button onclick="closeModal('tx-modal')" class="p-2 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-800">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <!-- 3 Main Tabs: Expense | Income | Transfer -->
+      <div class="grid grid-cols-3 gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-2xl mb-4">
+        <button type="button" id="tx-tab-expense" onclick="setTxType('expense')" class="py-2 text-xs font-bold rounded-xl bg-rose-500 text-white shadow-sm transition" data-i18n="expense">Pengeluaran</button>
+        <button type="button" id="tx-tab-income" onclick="setTxType('income')" class="py-2 text-xs font-bold rounded-xl text-slate-600 dark:text-slate-300 transition" data-i18n="income">Pemasukan</button>
+        <button type="button" id="tx-tab-transfer" onclick="setTxType('transfer')" class="py-2 text-xs font-bold rounded-xl text-slate-600 dark:text-slate-300 transition" data-i18n="transfer">Transfer</button>
+      </div>
+
+      <form id="tx-form" onsubmit="saveTransaction(event)" class="space-y-3.5">
+        <!-- Amount Display + Toggle Calculator -->
+        <div class="bg-slate-50 dark:bg-slate-800/80 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700">
+          <div class="flex items-center justify-between text-[11px] text-slate-400 mb-1">
+            <span data-i18n="amountLabel">Nominal Transaksi</span>
+            <span id="calc-expression-preview" class="font-mono text-indigo-500 font-semibold"></span>
+          </div>
+          <div class="flex items-center justify-between gap-2">
+            <span id="tx-currency-symbol" class="text-lg font-extrabold text-slate-400">Rp</span>
+            <input type="text" id="tx-amount-display" readonly value="0" class="w-full bg-transparent text-2xl font-extrabold text-right focus:outline-none text-slate-900 dark:text-white" />
+            <button type="button" onclick="toggleCalculator()" class="p-2 rounded-xl bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400" data-i18n-title="toggleCalculator">
+              <i data-lucide="calculator" class="w-4 h-4"></i>
+            </button>
+          </div>
+
+          <!-- Built-In Calculator Keypad -->
+          <div id="calc-keypad" class="grid grid-cols-4 gap-1.5 mt-3 pt-3 border-t border-slate-200 dark:border-slate-700">
+            <button type="button" onclick="calcInput('AC')" class="calc-btn bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 font-bold">AC</button>
+            <button type="button" onclick="calcInput('BACK')" class="calc-btn bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold">⌫</button>
+            <button type="button" onclick="calcInput('÷')" class="calc-btn bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-300 font-bold">÷</button>
+            <button type="button" onclick="calcInput('×')" class="calc-btn bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-300 font-bold">×</button>
+
+            <button type="button" onclick="calcInput('7')" class="calc-btn">7</button>
+            <button type="button" onclick="calcInput('8')" class="calc-btn">8</button>
+            <button type="button" onclick="calcInput('9')" class="calc-btn">9</button>
+            <button type="button" onclick="calcInput('-')" class="calc-btn bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-300 font-bold">−</button>
+
+            <button type="button" onclick="calcInput('4')" class="calc-btn">4</button>
+            <button type="button" onclick="calcInput('5')" class="calc-btn">5</button>
+            <button type="button" onclick="calcInput('6')" class="calc-btn">6</button>
+            <button type="button" onclick="calcInput('+')" class="calc-btn bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-300 font-bold">+</button>
+
+            <button type="button" onclick="calcInput('1')" class="calc-btn">1</button>
+            <button type="button" onclick="calcInput('2')" class="calc-btn">2</button>
+            <button type="button" onclick="calcInput('3')" class="calc-btn">3</button>
+            <button type="button" onclick="calcInput('=')" class="calc-btn row-span-2 bg-indigo-600 text-white font-extrabold">=</button>
+
+            <button type="button" onclick="calcInput('0')" class="calc-btn">0</button>
+            <button type="button" onclick="calcInput('000')" class="calc-btn text-xs">000</button>
+            <button type="button" onclick="calcInput('.')" class="calc-btn">.</button>
+          </div>
+        </div>
+
+        <!-- Transaction Name -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 mb-1" data-i18n="txNameLabel">Nama / Catatan Transaksi</label>
+          <input type="text" id="tx-name" required placeholder="Contoh: Makan Siang / Gaji" data-i18n-placeholder="txNamePlaceholder" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+        </div>
+
+        <!-- Category Selection (Hidden on Transfer) -->
+        <div id="tx-category-group">
+          <label class="block text-xs font-semibold text-slate-500 mb-1.5" data-i18n="categoryLabel">Kategori</label>
+          <div id="tx-category-grid" class="grid grid-cols-4 gap-2"></div>
+        </div>
+
+        <!-- Wallet Selection -->
+        <div class="grid grid-cols-1 gap-3" id="tx-wallet-container">
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1" id="tx-wallet-from-label" data-i18n="walletLabel">Pilih Dompet</label>
+            <select id="tx-wallet-from" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-semibold"></select>
+          </div>
+          <div id="tx-wallet-to-group" class="hidden">
+            <label class="block text-xs font-semibold text-slate-500 mb-1" data-i18n="toWalletLabel">Ke Dompet Tujuan</label>
+            <select id="tx-wallet-to" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-semibold"></select>
+          </div>
+        </div>
+
+        <!-- Date -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 mb-1" data-i18n="dateLabel">Tanggal</label>
+          <input type="date" id="tx-date" required class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-semibold" />
+        </div>
+
+        <button type="submit" class="w-full py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm shadow-lg shadow-indigo-500/30 transition active:scale-[0.98]" data-i18n="saveTxBtn">Simpan Transaksi</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL 2: ADD WALLET ==================== -->
+  <div id="wallet-modal" class="fixed inset-0 z-50 hidden bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="w-full max-w-sm bg-white dark:bg-slate-900 rounded-3xl p-5 shadow-2xl border border-slate-200 dark:border-slate-800">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-extrabold text-base" data-i18n="addWalletTitle">Tambah Dompet Baru</h3>
+        <button onclick="closeModal('wallet-modal')" class="p-1.5 rounded-full bg-slate-100 dark:bg-slate-800"><i data-lucide="x" class="w-4 h-4"></i></button>
+      </div>
+      <form onsubmit="saveNewWallet(event)" class="space-y-3.5">
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 mb-1" data-i18n="walletName">Nama Dompet</label>
+          <input type="text" id="new-wallet-name" required placeholder="Contoh: Bank / E-Wallet" data-i18n-placeholder="walletNamePlaceholder" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm" />
+        </div>
+        <p class="text-xs text-slate-500 dark:text-slate-400" data-i18n="walletStartsAtZero">Dompet baru dimulai dengan saldo 0.</p>
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 mb-1" data-i18n="cardColor">Warna Kartu</label>
+          <select id="new-wallet-color" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-semibold">
+            <option value="from-indigo-600 to-blue-600" data-i18n="colorIndigo">Indigo Blue</option>
+            <option value="from-emerald-500 to-teal-600" data-i18n="colorEmerald">Emerald Green</option>
+            <option value="from-amber-500 to-orange-600" data-i18n="colorAmber">Amber Orange</option>
+            <option value="from-rose-500 to-pink-600" data-i18n="colorRose">Rose Pink</option>
+            <option value="from-purple-600 to-fuchsia-600" data-i18n="colorPurple">Royal Purple</option>
+          </select>
+        </div>
+        <button type="submit" class="w-full py-3 rounded-2xl bg-indigo-600 text-white font-bold text-sm" data-i18n="saveBtn">Simpan</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL 3: DAILY SAFE BUDGET SETTINGS ==================== -->
+  <div id="safe-budget-modal" class="fixed inset-0 z-50 hidden bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="w-full max-w-sm bg-white dark:bg-slate-900 rounded-3xl p-5 shadow-2xl border border-slate-200 dark:border-slate-800">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-extrabold text-base" data-i18n="setDailySafeTitle">Atur Jatah Aman Harian</h3>
+        <button onclick="closeModal('safe-budget-modal')" class="p-1.5 rounded-full bg-slate-100 dark:bg-slate-800"><i data-lucide="x" class="w-4 h-4"></i></button>
+      </div>
+      <form onsubmit="saveSafeBudget(event)" class="space-y-3.5">
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 mb-1" data-i18n="totalBudgetLabel">Total Anggaran</label>
+          <input type="number" step="any" id="safe-total-input" required class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-bold" />
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 mb-1" data-i18n="targetDaysLabel">Target Durasi (Hari)</label>
+          <input type="number" min="1" max="365" id="safe-days-input" required class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-bold" />
+        </div>
+        <button type="submit" class="w-full py-3 rounded-2xl bg-indigo-600 text-white font-bold text-sm" data-i18n="saveBtn">Simpan</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL 4: ADD SAVING GOAL ==================== -->
+  <div id="goal-modal" class="fixed inset-0 z-50 hidden bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="w-full max-w-sm bg-white dark:bg-slate-900 rounded-3xl p-5 shadow-2xl border border-slate-200 dark:border-slate-800">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-extrabold text-base" data-i18n="newGoalModalTitle">Target Nabung Baru</h3>
+        <button onclick="closeModal('goal-modal')" class="p-1.5 rounded-full bg-slate-100 dark:bg-slate-800"><i data-lucide="x" class="w-4 h-4"></i></button>
+      </div>
+      <form onsubmit="saveNewGoal(event)" class="space-y-3.5">
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 mb-1" data-i18n="goalName">Nama Target</label>
+          <input type="text" id="goal-name-input" required placeholder="Contoh: Dana Darurat / Laptop" data-i18n-placeholder="goalNamePlaceholder" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm" />
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 mb-1" data-i18n="targetAmount">Nominal Target</label>
+          <input type="number" step="any" id="goal-target-input" required class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm" />
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 mb-1" data-i18n="deadlineLabel">Tenggat Waktu</label>
+          <input type="date" id="goal-deadline-input" required class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm" />
+        </div>
+        <button type="submit" class="w-full py-3 rounded-2xl bg-indigo-600 text-white font-bold text-sm" data-i18n="saveBtn">Simpan</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL 5: TOP UP SAVING GOAL ==================== -->
+  <div id="topup-goal-modal" class="fixed inset-0 z-50 hidden bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="w-full max-w-sm bg-white dark:bg-slate-900 rounded-3xl p-5 shadow-2xl border border-slate-200 dark:border-slate-800">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-extrabold text-base" data-i18n="topupGoalTitle">Top Up Target Nabung</h3>
+        <button onclick="closeModal('topup-goal-modal')" class="p-1.5 rounded-full bg-slate-100 dark:bg-slate-800"><i data-lucide="x" class="w-4 h-4"></i></button>
+      </div>
+      <form onsubmit="submitGoalTopup(event)" class="space-y-3.5">
+        <input type="hidden" id="topup-goal-id" />
+        <p class="text-xs font-semibold text-indigo-600 dark:text-indigo-400" id="topup-goal-title-label"></p>
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 mb-1" data-i18n="topupAmount">Nominal Top Up</label>
+          <input type="number" step="any" id="topup-amount-input" required class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-bold" />
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 mb-1" data-i18n="sourceWallet">Ambil dari Dompet</label>
+          <select id="topup-wallet-select" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-semibold"></select>
+        </div>
+        <button type="submit" class="w-full py-3 rounded-2xl bg-indigo-600 text-white font-bold text-sm" data-i18n="confirmTopupBtn">Top Up Sekarang</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL 6: ADD RECEIVABLE (PIUTANG) ==================== -->
+  <div id="debt-modal" class="fixed inset-0 z-50 hidden bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="w-full max-w-sm bg-white dark:bg-slate-900 rounded-3xl p-5 shadow-2xl border border-slate-200 dark:border-slate-800">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-extrabold text-base" data-i18n="newDebtModalTitle">Catat Piutang Baru</h3>
+        <button onclick="closeModal('debt-modal')" class="p-1.5 rounded-full bg-slate-100 dark:bg-slate-800"><i data-lucide="x" class="w-4 h-4"></i></button>
+      </div>
+      <form onsubmit="saveNewDebt(event)" class="space-y-3.5">
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 mb-1" data-i18n="borrowerName">Nama Peminjam</label>
+          <input type="text" id="debt-person-input" required placeholder="Contoh: Budi" data-i18n-placeholder="borrowerPlaceholder" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm" />
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 mb-1" data-i18n="loanAmount">Nominal Pinjaman</label>
+          <input type="number" step="any" id="debt-amount-input" required class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm" />
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 mb-1" data-i18n="dueDateLabel">Tanggal Jatuh Tempo</label>
+          <input type="date" id="debt-due-input" required class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm" />
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 mb-1" data-i18n="lentWallet">Sumber Dompet Dipinjamkan</label>
+          <select id="debt-wallet-select" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-semibold"></select>
+        </div>
+        <button type="submit" class="w-full py-3 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm" data-i18n="saveBtn">Simpan</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL 7: RESET CONFIRMATION ==================== -->
+  <div id="reset-modal" class="fixed inset-0 z-50 hidden bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="w-full max-w-sm bg-white dark:bg-slate-900 rounded-3xl p-6 text-center shadow-2xl border border-slate-200 dark:border-slate-800">
+      <div class="w-12 h-12 rounded-2xl bg-rose-100 dark:bg-rose-950 text-rose-600 mx-auto flex items-center justify-center mb-3">
+        <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+      </div>
+      <h3 class="font-extrabold text-base mb-1" data-i18n="resetConfirmTitle">Reset Semua Data?</h3>
+      <p class="text-xs text-slate-500 dark:text-slate-400 mb-5" data-i18n="resetConfirmDesc">Seluruh dompet, riwayat transaksi, target, dan piutang akan dihapus dan diatur ulang ke 0.</p>
+      <div class="grid grid-cols-2 gap-2.5">
+        <button onclick="closeModal('reset-modal')" class="py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 font-bold text-xs" data-i18n="cancelBtn">Batal</button>
+        <button onclick="confirmResetAll()" class="py-2.5 rounded-xl bg-rose-600 text-white font-bold text-xs" data-i18n="yesResetBtn">Ya, Reset</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main JavaScript -->
+  <script src="app.js"></script>
 </body>
 </html>

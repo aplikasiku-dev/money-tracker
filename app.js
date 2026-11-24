@@ -1,2305 +1,1490 @@
-// SIMULASI DATABASE & STATE MANAGEMENT
-const GUEST_SESSION_KEYS = ['isLoggedIn', 'userName', 'guestUserData'];
-const GUEST_NAME = 'Tamu Spesial';
+// ==================== GLOBAL STATE & I18N ====================
+const STORAGE_KEY = 'sakupintar_fintech_v2_zero';
+const USD_RATE = 15500; // Conversion rate for IDR <-> USD display & scaling
 
-function clearGuestSessionOnPageLoad() {
-    const guestSessionActive = sessionStorage.getItem('isLoggedIn') === 'true' &&
-        (sessionStorage.getItem('guestUserData') !== null || sessionStorage.getItem('userName') === GUEST_NAME);
-    if (guestSessionActive) {
-        GUEST_SESSION_KEYS.forEach(key => sessionStorage.removeItem(key));
-        sessionStorage.setItem('guestSessionExpired', 'true');
-    }
-    return guestSessionActive || sessionStorage.getItem('guestSessionExpired') === 'true';
-}
-
-const guestSessionExpired = clearGuestSessionOnPageLoad();
-
-let usersDB = JSON.parse(localStorage.getItem('fintech_users') || '[]');
-let currentUser = guestSessionExpired ? null : loadActiveUser();
-let isGuestMode = false;
-let isAuthRegisterMode = false;
-let isBalanceSensorHidden = false;
-let calculatorDisplayValue = '0';
-let calculatorStoredValue = null;
-let calculatorPendingOperator = null;
-let calculatorWaitingForOperand = false;
-const savedCurrency = localStorage.getItem('fintech_currency');
-let currentCurrency = savedCurrency === 'IDR' ? 'IDR' : 'USD';
-const savedCardTheme = localStorage.getItem('fintech_card_theme');
-let currentCardTheme = ['black', 'blue', 'green', 'gold'].includes(savedCardTheme) ? savedCardTheme : 'blue';
-const savedLanguage = localStorage.getItem('fintech_language');
-let currentLanguage = savedLanguage === 'en' ? 'en' : 'id';
-const savedTheme = localStorage.getItem('fintech_theme');
-let currentTheme = ['dark', 'light'].includes(savedTheme)
-    ? savedTheme
-    : window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-const savedDailyBudgetDays = Number(localStorage.getItem('fintech_daily_budget_days'));
-let dailyBudgetDays = Number.isInteger(savedDailyBudgetDays) && savedDailyBudgetDays >= 1 && savedDailyBudgetDays <= 365
-    ? savedDailyBudgetDays
-    : 14;
-let editingTransactionIndex = null;
-const USD_TO_IDR = 15500;
-let displayedCalendarMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-let appConfig = null;
-let historyTypeFilter = 'all';
-let activeHistoryFilter = 'all';
-let historySearchQuery = '';
-let isTileGameSpinning = false;
-let tileGameTimeout = null;
-let tileGameAutoSpinTimeout = null;
-let tileGameShatterTimeout = null;
-let tileGameReelTimeouts = [];
-let freeSpinsSisa = 0;
-let isFreeSpinMode = false;
-let tileGamePoints = 0;
-let freeSpinSessionPoints = 0;
-let tileGameAudioContext = null;
-let tileGameBgmInterval = null;
-let tileGameBgmVoices = [];
-let tileGameBgmNoteIndex = 0;
-let isTileGameTurbo = false;
-
-const translations = {
-    en: {
-        welcome: 'Hello,', logout: 'Logout', availableBalance: 'Available Balance', cardNumber: 'Card Number', validThru: 'Valid Thru',
-        addExpense: '+ Add Expense', addIncome: '+ Add Income', spendingBreakdown: 'Spending Breakdown', totalSpent: 'Total Spent',
-        recentTransactions: 'Recent Transactions', seeAll: 'See All', expensesList: 'Expenses List', thisMonth: 'This Month',
-        allCategories: 'All Categories', financialReport: 'Financial Report',
-        totalSalary: 'Total Salary', totalExpense: 'Total Expense', expenseBreakdown: 'Expense Breakdown',
-        account: 'Account', accountSubtitle: 'Manage your profile and security settings.', profile: 'Profile', back: 'Back',
-        profileSubtitle: 'View and edit your personal details', changePassword: 'Change Password',
-        passwordSubtitle: 'Update your account password', fullName: 'Full Name', userId: 'Student ID / User ID',
-        faculty: 'Faculty / Category', birthPlace: 'Place of Birth', birthDateAge: 'Date of Birth / Age',
-        dateOfBirth: 'Date of Birth', age: 'Age', editProfile: 'Edit Profile', saveChanges: 'Save Changes', close: 'Close',
-        currentPassword: 'Current Password', newPassword: 'New Password', confirmPassword: 'Confirm New Password',
-        updatePassword: 'Update Password', home: 'Home', history: 'History', report: 'Report',
-        transactionTitle: 'Add New Transaction', expenseTitle: 'Add New Expense', incomeTitle: 'Add New Income',
-        expense: 'Expense', income: 'Income', amount: 'Amount', transactionName: 'Transaction Name',
-        category: 'Category', paymentMethod: 'Payment Method', uangKu: 'MY MONEY', selectPaymentMethod: 'Select payment method',
-        cash: 'Cash', transferTf: 'Transfer / Tf', savingsGoal: 'Savings Goal',
-        savingsGoalName: 'Goal Name', savingsGoalPlaceholder: 'Example: New Laptop / Vacation',
-        savingsGoalAmount: 'Goal Amount (Rp)', saveGoal: 'Save Goal',
-        saveTransaction: 'Save Transaction', calculator: 'Amount Calculator',
-        goalProgress: 'GOAL PROGRESS', goalAmount: 'GOAL AMOUNT',
-        liveUpdates: 'Live updates', noFilteredTransactions: 'No transactions match this filter.',
-        receivable: 'Receivable', loanPaid: 'Paid', markLoanPaid: 'Mark receivable as paid',
-        unpaidLoan: 'Unpaid',
-        confirmLoanPaid: 'Mark "{title}" as paid and add {amount} to your balance?',
-        darkMode: 'Dark mode', lightMode: 'Light mode',
-        borrowerName: 'Borrower Name', borrowerPlaceholder: 'Enter borrower name',
-        transactionPlaceholder: 'Example: Monthly shopping / Salary',
-        motivationBalanced: 'Nice, your spending is staying in check. Keep it up!',
-        motivationLowBalance: 'Balance is running low—maybe give impulse buys a little timeout.',
-        motivationHighSpending: 'Spending is lively this month. Your budget may appreciate a quiet day.',
-        motivationPositive: 'Good progress—your money is working toward your plans.',
-        categoryBudgetWarning: 'Spending on {category} has exceeded the safe limit! Time to tighten the budget.',
-        dailyBudgetTitle: 'Safe Daily Budget', dailyBudgetAllowance: 'Safe allowance', targetDays: 'Target days',
-        spentToday: 'Spent today', editTransaction: 'Edit Transaction',
-        invalidTargetDays: 'Enter a target between 1 and 365 days.',
-        historySearchPlaceholder: 'Search transactions...',
-        confirmDeleteAllTransactions: 'Are you sure you want to delete all transaction history?',
-        confirmDeleteTransaction: 'Are you sure you want to delete "{title}" ({amount})? Your balance will be adjusted.',
-        allocated: 'Allocated', foodDrinks: 'Food & Drinks', transport: 'Transport', shopping: 'Shopping', other: 'Other',
-        ageYears: 'years old',
-        noValue: 'Not provided', invalidBirthDate: 'Date of birth cannot be in the future.',
-        invalidAge: 'Enter an age between 1 and 130.',
-        incorrectPassword: 'Current password is incorrect.', passwordMismatch: 'New passwords do not match.',
-        passwordUpdated: 'Password updated successfully.', passwordUpdateFailed: 'Could not save the password. Please try again.',
-        passwordTooShort: 'New password must be at least 6 characters.', changesSaveFailed: 'Could not save changes. Please try again.'
-    },
+const I18N = {
     id: {
-        welcome: 'Halo,', logout: 'Keluar', availableBalance: 'Saldo Tersedia', cardNumber: 'Nomor Kartu', validThru: 'Berlaku Hingga',
-        addExpense: '+ Tambah Pengeluaran', addIncome: '+ Tambah Pemasukan', spendingBreakdown: 'Rincian Pengeluaran',
-        totalSpent: 'Total Pengeluaran', recentTransactions: 'Transaksi Terbaru', seeAll: 'Lihat Semua',
-        expensesList: 'Daftar Transaksi', thisMonth: 'Bulan Ini', allCategories: 'Semua Kategori',
-        financialReport: 'Laporan Keuangan', totalSalary: 'Total Pemasukan',
-        totalExpense: 'Total Pengeluaran', expenseBreakdown: 'Rincian Pengeluaran',
-        account: 'Akun', accountSubtitle: 'Kelola profil dan pengaturan keamanan Anda.', profile: 'Profil', back: 'Kembali',
-        profileSubtitle: 'Lihat dan ubah detail pribadi Anda', changePassword: 'Ganti Kata Sandi',
-        passwordSubtitle: 'Perbarui kata sandi akun Anda', fullName: 'Nama Lengkap', userId: 'ID Mahasiswa / ID Pengguna',
-        faculty: 'Fakultas / Kategori', birthPlace: 'Tempat Lahir', birthDateAge: 'Tanggal Lahir / Umur',
-        dateOfBirth: 'Tanggal Lahir', age: 'Umur / Usia', editProfile: 'Edit Profil', saveChanges: 'Simpan Perubahan', close: 'Tutup',
-        currentPassword: 'Kata Sandi Lama', newPassword: 'Kata Sandi Baru', confirmPassword: 'Konfirmasi Kata Sandi Baru',
-        updatePassword: 'Perbarui Kata Sandi', home: 'Beranda', history: 'Riwayat', report: 'Laporan',
-        transactionTitle: 'Tambah Transaksi Baru', expenseTitle: 'Tambah Pengeluaran Baru', incomeTitle: 'Tambah Pemasukan Baru',
-        expense: 'Pengeluaran', income: 'Pemasukan', amount: 'Jumlah Nominal', transactionName: 'Nama / Judul Transaksi',
-        category: 'Kategori', paymentMethod: 'Metode Pembayaran', uangKu: 'UANG KU', selectPaymentMethod: 'Pilih metode pembayaran',
-        cash: 'Tunai (Cash)', transferTf: 'Transfer / Tf', savingsGoal: 'Target Nabung',
-        savingsGoalName: 'Nama Target', savingsGoalPlaceholder: 'Contoh: Beli Laptop / Liburan',
-        savingsGoalAmount: 'Nominal Target (Rp)', saveGoal: 'Simpan Target',
-        saveTransaction: 'Simpan Transaksi', calculator: 'Kalkulator Nominal',
-        goalProgress: 'PROGRES TARGET', goalAmount: 'NOMINAL TARGET',
-        liveUpdates: 'Diperbarui langsung', noFilteredTransactions: 'Tidak ada transaksi yang sesuai dengan filter ini.',
-        receivable: 'Piutang', loanPaid: 'Lunas', markLoanPaid: 'Tandai piutang lunas',
-        unpaidLoan: 'Belum lunas',
-        confirmLoanPaid: 'Tandai "{title}" sebagai lunas dan tambahkan {amount} ke saldo?',
-        darkMode: 'Mode Gelap', lightMode: 'Mode Terang',
-        borrowerName: 'Nama Peminjam', borrowerPlaceholder: 'Masukkan nama peminjam',
-        transactionPlaceholder: 'Contoh: Belanja Bulanan / Gaji',
-        motivationBalanced: 'Mantap, pengeluaran masih terjaga. Pertahankan!',
-        motivationLowBalance: 'Saldo mulai menipis—coba beri jeda sebentar untuk belanja impulsif.',
-        motivationHighSpending: 'Pengeluaran bulan ini cukup aktif. Anggaran mungkin butuh hari tenang.',
-        motivationPositive: 'Progres bagus—uangmu sedang bergerak menuju rencana yang kamu buat.',
-        categoryBudgetWarning: 'Pengeluaran {category} udah melebihi batas aman! Harap hemat-hemat lagi!',
-        dailyBudgetTitle: 'Jatah Aman Harian', dailyBudgetAllowance: 'Jatah Aman', targetDays: 'Target Hari',
-        spentToday: 'Terpakai hari ini', editTransaction: 'Edit Transaksi',
-        invalidTargetDays: 'Masukkan target antara 1 sampai 365 hari.',
-        historySearchPlaceholder: 'Cari transaksi...',
-        confirmDeleteAllTransactions: 'Apakah Anda yakin ingin menghapus seluruh riwayat transaksi?',
-        confirmDeleteTransaction: 'Apakah Anda yakin ingin menghapus "{title}" ({amount})? Saldo akan disesuaikan.',
-        allocated: 'Dialokasikan', foodDrinks: 'Makanan & Minuman', transport: 'Transportasi', shopping: 'Belanja', other: 'Lainnya',
-        ageYears: 'tahun',
-        noValue: 'Belum diisi', invalidBirthDate: 'Tanggal lahir tidak boleh di masa depan.',
-        invalidAge: 'Masukkan umur antara 1 sampai 130 tahun.',
-        incorrectPassword: 'Kata sandi lama salah.', passwordMismatch: 'Kata sandi baru tidak cocok.',
-        passwordUpdated: 'Kata sandi berhasil diperbarui.', passwordUpdateFailed: 'Kata sandi gagal disimpan. Silakan coba lagi.',
-        passwordTooShort: 'Kata sandi baru harus terdiri dari minimal 6 karakter.',
-        changesSaveFailed: 'Perubahan gagal disimpan. Silakan coba lagi.'
+        appTagline: 'Keuangan Pribadi Cerdas',
+        authHeadline: 'Kelola Uang Lebih Cerdas',
+        authDescription: 'Atur pengeluaran, jaga anggaran harian, dan capai target masa depan dalam satu tempat.',
+        namePlaceholder: 'Contoh: Amjad',
+        passwordPlaceholder: 'Masukkan PIN atau kata sandi',
+        authRequired: 'Nama lengkap dan PIN atau kata sandi wajib diisi.',
+        txNamePlaceholder: 'Contoh: Makan siang atau Gaji',
+        walletNamePlaceholder: 'Contoh: Bank atau E-Wallet',
+        goalNamePlaceholder: 'Contoh: Dana darurat atau Laptop',
+        borrowerPlaceholder: 'Contoh: Budi',
+        walletStartsAtZero: 'Dompet baru dimulai dengan saldo 0.',
+        itemCount: 'item',
+        deleteTitle: 'Hapus transaksi',
+        toggleCalculator: 'Buka atau tutup kalkulator',
+        showBalance: 'Tampilkan saldo',
+        hideBalance: 'Sembunyikan saldo',
+        switchCurrency: 'Ganti mata uang',
+        switchLanguage: 'Ganti bahasa',
+        switchTheme: 'Ganti mode tampilan',
+        addTransaction: 'Tambah transaksi',
+        lentWallet: 'Sumber dompet dipinjamkan',
+        colorIndigo: 'Biru Indigo',
+        colorEmerald: 'Hijau Zamrud',
+        colorAmber: 'Jingga Amber',
+        colorRose: 'Merah Muda',
+        colorPurple: 'Ungu Royal',
+        loginTab: 'Masuk',
+        registerTab: 'Daftar Akun',
+        fullName: 'Nama Lengkap',
+        pinPassword: 'PIN / Kata Sandi',
+        loginBtn: 'Masuk ke Akun',
+        registerBtn: 'Daftar & Masuk',
+        orText: 'atau',
+        guestBtn: 'Masuk sebagai Tamu',
+        netWorth: 'Total Kekayaan Bersih',
+        monthIncome: 'Pemasukan Bulan Ini',
+        monthExpense: 'Pengeluaran Bulan Ini',
+        myWallets: 'Dompet Saya',
+        addWallet: 'Tambah Dompet',
+        dailySafeTitle: 'Jatah Aman Harian',
+        setBtn: 'Atur',
+        remainingToday: 'Sisa Jatah Hari Ini',
+        spentToday: 'Terpakai:',
+        recentTransactions: '5 Transaksi Terakhir',
+        seeAll: 'Lihat Semua',
+        historyTitle: 'Riwayat Transaksi',
+        allMonths: 'Semua Bulan',
+        allTypes: 'Semua Tipe',
+        expense: 'Pengeluaran',
+        income: 'Pemasukan',
+        transfer: 'Transfer',
+        allWallets: 'Semua Dompet',
+        goalsDebtsTitle: 'Target & Piutang',
+        savingGoalsTab: 'Target Nabung',
+        receivablesTab: 'Catatan Piutang',
+        newGoalBtn: '+ Buat Target Nabung Baru',
+        newDebtBtn: '+ Catat Piutang Baru',
+        reportAccountTitle: 'Laporan & Akun',
+        monthlySummary: 'Ringkasan Keuangan Bulanan',
+        totalIncome: 'Total Pemasukan',
+        totalExpense: 'Total Pengeluaran',
+        cashflowRatio: 'Rasio Arus Kas',
+        expenseByCategory: 'Pengeluaran per Kategori',
+        accountSettings: 'Pengaturan Akun',
+        profileName: 'Nama Profil',
+        saveBtn: 'Simpan',
+        currencyLabel: 'Mata Uang Utama',
+        languageLabel: 'Bahasa Aplikasi',
+        dataManagement: 'Manajemen Data',
+        exportCsvBtn: 'Export Laporan ke CSV / Excel',
+        backupJsonBtn: 'Backup Data (Download JSON)',
+        restoreJsonBtn: 'Restore Data (Upload JSON)',
+        resetDataBtn: 'Reset Semua Data',
+        logoutBtn: 'Keluar Akun (Logout)',
+        navHome: 'Beranda',
+        navHistory: 'Riwayat',
+        navGoals: 'Target',
+        navReport: 'Laporan',
+        addTxTitle: 'Catat Transaksi Cepat',
+        amountLabel: 'Nominal Transaksi',
+        txNameLabel: 'Nama / Catatan Transaksi',
+        categoryLabel: 'Kategori',
+        walletLabel: 'Pilih Dompet',
+        fromWalletLabel: 'Dari Dompet Asal',
+        toWalletLabel: 'Ke Dompet Tujuan',
+        dateLabel: 'Tanggal',
+        saveTxBtn: 'Simpan Transaksi',
+        addWalletTitle: 'Tambah Dompet Baru',
+        walletName: 'Nama Dompet',
+        initialBalance: 'Saldo Awal',
+        cardColor: 'Warna Kartu',
+        setDailySafeTitle: 'Atur Jatah Aman Harian',
+        totalBudgetLabel: 'Total Anggaran',
+        targetDaysLabel: 'Target Durasi (Hari)',
+        newGoalModalTitle: 'Target Nabung Baru',
+        goalName: 'Nama Target',
+        targetAmount: 'Nominal Target',
+        deadlineLabel: 'Tenggat Waktu',
+        topupGoalTitle: 'Top Up Target Nabung',
+        topupAmount: 'Nominal Top Up',
+        sourceWallet: 'Ambil dari Dompet',
+        confirmTopupBtn: 'Top Up Sekarang',
+        newDebtModalTitle: 'Catat Piutang Baru',
+        borrowerName: 'Nama Peminjam',
+        loanAmount: 'Nominal Pinjaman',
+        dueDateLabel: 'Tanggal Jatuh Tempo',
+        resetConfirmTitle: 'Reset Semua Data?',
+        resetConfirmDesc: 'Seluruh dompet, riwayat transaksi, target, dan piutang akan dihapus dan diatur ulang ke 0.',
+        cancelBtn: 'Batal',
+        yesResetBtn: 'Ya, Reset',
+        safeStatusGood: 'Aman',
+        safeStatusWarn: 'Hati-hati',
+        safeStatusOver: 'Overbudget',
+        targetDaysSub: 'Target {days} hari',
+        noTransactions: 'Belum ada transaksi',
+        noTransactionsDesc: 'Tap tombol + di bawah untuk mulai mencatat pemasukan atau pengeluaran pertama Anda.',
+        noGoals: 'Belum ada target nabung',
+        noGoalsDesc: 'Buat target tabungan impian Anda dan pantau progresnya di sini.',
+        noDebts: 'Belum ada catatan piutang',
+        noDebtsDesc: 'Catat uang yang dipinjam teman atau kerabat agar tidak lupa.',
+        noExpenseData: 'Belum ada pengeluaran bulan ini',
+        topupBtn: 'Top Up Target',
+        markPaidBtn: 'Tandai Lunas',
+        unpaidBadge: 'Belum Lunas',
+        paidBadge: 'Lunas',
+        collectedOf: 'Terkumpul {saved} dari {target}',
+        duePrefix: 'Jatuh Tempo:',
+        deadlinePrefix: 'Tenggat:',
+        toastTxSaved: 'Transaksi berhasil disimpan!',
+        toastTxDeleted: 'Transaksi dihapus & saldo dikembalikan.',
+        toastInvalidAmount: 'Masukkan nominal lebih dari 0!',
+        toastSameWallet: 'Dompet asal dan tujuan tidak boleh sama!',
+        toastWalletAdded: 'Dompet baru berhasil ditambahkan!',
+        toastBudgetUpdated: 'Jatah aman harian diperbarui!',
+        toastGoalAdded: 'Target nabung berhasil dibuat!',
+        toastGoalTopup: 'Top up target berhasil & saldo dompet terpotong!',
+        toastDebtAdded: 'Piutang dicatat & saldo dompet terpotong!',
+        toastDebtPaid: 'Piutang lunas! Saldo dikembalikan ke dompet.',
+        toastProfileSaved: 'Nama profil diperbarui!',
+        toastCsvExported: 'File CSV berhasil diunduh!',
+        toastJsonBackup: 'Backup JSON berhasil diunduh!',
+        toastJsonRestored: 'Data berhasil dipulihkan!',
+        toastJsonError: 'File JSON tidak valid!',
+        toastResetDone: 'Semua data telah direset ke 0!',
+        greetMorning: 'Selamat Pagi,',
+        greetAfternoon: 'Selamat Siang,',
+        greetEvening: 'Selamat Malam,',
+        catFood: 'Makan',
+        catTransport: 'Transport',
+        catShopping: 'Belanja',
+        catBills: 'Tagihan',
+        catEntertainment: 'Hiburan',
+        catHealth: 'Kesehatan',
+        catSalary: 'Gaji',
+        catOther: 'Lainnya'
+    },
+    en: {
+        appTagline: 'Smart Personal Finance',
+        authHeadline: 'Manage Money Smarter',
+        authDescription: 'Track spending, stay within your daily budget, and reach your future goals in one place.',
+        namePlaceholder: 'Example: Amjad',
+        passwordPlaceholder: 'Enter your PIN or password',
+        authRequired: 'Enter your full name and PIN or password.',
+        txNamePlaceholder: 'Example: Lunch or Salary',
+        walletNamePlaceholder: 'Example: Bank or E-Wallet',
+        goalNamePlaceholder: 'Example: Emergency fund or Laptop',
+        borrowerPlaceholder: 'Example: Alex',
+        walletStartsAtZero: 'New wallets always start with a balance of 0.',
+        itemCount: 'items',
+        deleteTitle: 'Delete transaction',
+        toggleCalculator: 'Show or hide calculator',
+        showBalance: 'Show balances',
+        hideBalance: 'Hide balances',
+        switchCurrency: 'Switch currency',
+        switchLanguage: 'Switch language',
+        switchTheme: 'Switch appearance',
+        addTransaction: 'Add transaction',
+        lentWallet: 'Lent from wallet',
+        colorIndigo: 'Indigo Blue',
+        colorEmerald: 'Emerald Green',
+        colorAmber: 'Amber Orange',
+        colorRose: 'Rose Pink',
+        colorPurple: 'Royal Purple',
+        loginTab: 'Sign In',
+        registerTab: 'Register',
+        fullName: 'Full Name',
+        pinPassword: 'PIN / Password',
+        loginBtn: 'Sign In to Account',
+        registerBtn: 'Create Account',
+        orText: 'or',
+        guestBtn: 'Continue as Guest',
+        netWorth: 'Total Net Worth',
+        monthIncome: 'This Month Income',
+        monthExpense: 'This Month Expense',
+        myWallets: 'My Wallets',
+        addWallet: 'Add Wallet',
+        dailySafeTitle: 'Daily Safe-to-Spend',
+        setBtn: 'Configure',
+        remainingToday: 'Remaining Today',
+        spentToday: 'Spent:',
+        recentTransactions: 'Last 5 Transactions',
+        seeAll: 'See All',
+        historyTitle: 'Transaction History',
+        allMonths: 'All Months',
+        allTypes: 'All Types',
+        expense: 'Expense',
+        income: 'Income',
+        transfer: 'Transfer',
+        allWallets: 'All Wallets',
+        goalsDebtsTitle: 'Goals & Receivables',
+        savingGoalsTab: 'Saving Goals',
+        receivablesTab: 'Receivables',
+        newGoalBtn: '+ Create New Saving Goal',
+        newDebtBtn: '+ Record New Receivable',
+        reportAccountTitle: 'Reports & Account',
+        monthlySummary: 'Monthly Financial Summary',
+        totalIncome: 'Total Income',
+        totalExpense: 'Total Expense',
+        cashflowRatio: 'Cashflow Ratio',
+        expenseByCategory: 'Expense by Category',
+        accountSettings: 'Account Settings',
+        profileName: 'Profile Name',
+        saveBtn: 'Save',
+        currencyLabel: 'Primary Currency',
+        languageLabel: 'App Language',
+        dataManagement: 'Data Management',
+        exportCsvBtn: 'Export Report to CSV / Excel',
+        backupJsonBtn: 'Backup Data (Download JSON)',
+        restoreJsonBtn: 'Restore Data (Upload JSON)',
+        resetDataBtn: 'Reset All Data',
+        logoutBtn: 'Sign Out (Logout)',
+        navHome: 'Home',
+        navHistory: 'History',
+        navGoals: 'Goals',
+        navReport: 'Report',
+        addTxTitle: 'Quick Add Transaction',
+        amountLabel: 'Transaction Amount',
+        txNameLabel: 'Transaction Name / Note',
+        categoryLabel: 'Category',
+        walletLabel: 'Select Wallet',
+        fromWalletLabel: 'From Source Wallet',
+        toWalletLabel: 'To Destination Wallet',
+        dateLabel: 'Date',
+        saveTxBtn: 'Save Transaction',
+        addWalletTitle: 'Add New Wallet',
+        walletName: 'Wallet Name',
+        initialBalance: 'Initial Balance',
+        cardColor: 'Card Color',
+        setDailySafeTitle: 'Configure Daily Safe-to-Spend',
+        totalBudgetLabel: 'Total Budget',
+        targetDaysLabel: 'Target Duration (Days)',
+        newGoalModalTitle: 'New Saving Goal',
+        goalName: 'Goal Name',
+        targetAmount: 'Target Amount',
+        deadlineLabel: 'Deadline',
+        topupGoalTitle: 'Top Up Saving Goal',
+        topupAmount: 'Top Up Amount',
+        sourceWallet: 'Deduct from Wallet',
+        confirmTopupBtn: 'Top Up Now',
+        newDebtModalTitle: 'Record New Receivable',
+        borrowerName: 'Borrower Name',
+        loanAmount: 'Loan Amount',
+        dueDateLabel: 'Due Date',
+        resetConfirmTitle: 'Reset All Data?',
+        resetConfirmDesc: 'All wallets, transactions, goals, and receivables will be cleared and reset to 0.',
+        cancelBtn: 'Cancel',
+        yesResetBtn: 'Yes, Reset',
+        safeStatusGood: 'Safe',
+        safeStatusWarn: 'Caution',
+        safeStatusOver: 'Overbudget',
+        targetDaysSub: '{days}-day target',
+        noTransactions: 'No transactions yet',
+        noTransactionsDesc: 'Tap the + button below to record your first income or expense.',
+        noGoals: 'No saving goals yet',
+        noGoalsDesc: 'Create your dream savings target and track progress here.',
+        noDebts: 'No receivables recorded',
+        noDebtsDesc: 'Keep track of money lent to friends or family so you never forget.',
+        noExpenseData: 'No expenses recorded this month',
+        topupBtn: 'Top Up Goal',
+        markPaidBtn: 'Mark as Paid',
+        unpaidBadge: 'Unpaid',
+        paidBadge: 'Paid',
+        collectedOf: 'Saved {saved} of {target}',
+        duePrefix: 'Due:',
+        deadlinePrefix: 'Deadline:',
+        toastTxSaved: 'Transaction saved successfully!',
+        toastTxDeleted: 'Transaction deleted & balance restored.',
+        toastInvalidAmount: 'Please enter an amount greater than 0!',
+        toastSameWallet: 'Source and destination wallets cannot be the same!',
+        toastWalletAdded: 'New wallet added!',
+        toastBudgetUpdated: 'Daily safe budget updated!',
+        toastGoalAdded: 'Saving goal created!',
+        toastGoalTopup: 'Goal topped up & wallet balance updated!',
+        toastDebtAdded: 'Receivable recorded & wallet balance deducted!',
+        toastDebtPaid: 'Receivable settled! Balance returned to wallet.',
+        toastProfileSaved: 'Profile name updated!',
+        toastCsvExported: 'CSV report downloaded!',
+        toastJsonBackup: 'JSON backup downloaded!',
+        toastJsonRestored: 'Data restored successfully!',
+        toastJsonError: 'Invalid JSON file!',
+        toastResetDone: 'All data has been reset to 0!',
+        greetMorning: 'Good Morning,',
+        greetAfternoon: 'Good Afternoon,',
+        greetEvening: 'Good Evening,',
+        catFood: 'Food',
+        catTransport: 'Transport',
+        catShopping: 'Shopping',
+        catBills: 'Bills',
+        catEntertainment: 'Leisure',
+        catHealth: 'Health',
+        catSalary: 'Salary',
+        catOther: 'Other'
     }
 };
 
-function loadActiveUser() {
-    const savedSessionEmail = localStorage.getItem('sesiUserAktif');
-    const legacyUser = savedSessionEmail
-        ? null
-        : JSON.parse(localStorage.getItem('fintech_current_user') || 'null');
-    const activeEmail = savedSessionEmail || (legacyUser && legacyUser.email);
+const CATEGORIES = [
+    { id: 'food', icon: 'utensils', color: 'bg-orange-100 text-orange-600 dark:bg-orange-950 dark:text-orange-400', labelKey: 'catFood' },
+    { id: 'transport', icon: 'car', color: 'bg-blue-100 text-blue-600 dark:bg-blue-950 dark:text-blue-400', labelKey: 'catTransport' },
+    { id: 'shopping', icon: 'shopping-bag', color: 'bg-pink-100 text-pink-600 dark:bg-pink-950 dark:text-pink-400', labelKey: 'catShopping' },
+    { id: 'bills', icon: 'zap', color: 'bg-amber-100 text-amber-600 dark:bg-amber-950 dark:text-amber-400', labelKey: 'catBills' },
+    { id: 'entertainment', icon: 'gamepad-2', color: 'bg-purple-100 text-purple-600 dark:bg-purple-950 dark:text-purple-400', labelKey: 'catEntertainment' },
+    { id: 'health', icon: 'heart-pulse', color: 'bg-rose-100 text-rose-600 dark:bg-rose-950 dark:text-rose-400', labelKey: 'catHealth' },
+    { id: 'salary', icon: 'briefcase', color: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400', labelKey: 'catSalary' },
+    { id: 'other', icon: 'layers', color: 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300', labelKey: 'catOther' }
+];
 
-    if (!activeEmail) {
-        return null;
+// ==================== INITIAL ZERO STATE ====================
+function getDefaultData() {
+    return {
+        isLoggedIn: false,
+        user: { name: 'User', isGuest: false },
+        settings: {
+            lang: 'id',
+            currency: 'IDR',
+            theme: 'light',
+            hideBalance: false
+        },
+        safeBudget: {
+            totalBudgetIDR: 1400000,
+            days: 14
+        },
+        wallets: [
+            { id: 'w1', name: 'Bank Utama', balanceIDR: 0, color: 'from-indigo-600 to-blue-600', icon: 'landmark' },
+            { id: 'w2', name: 'E-Wallet', balanceIDR: 0, color: 'from-emerald-500 to-teal-600', icon: 'smartphone' },
+            { id: 'w3', name: 'Tunai', balanceIDR: 0, color: 'from-amber-500 to-orange-600', icon: 'banknote' }
+        ],
+        transactions: [],
+        goals: [],
+        debts: []
+    };
+}
+
+let appState = loadState();
+let currentAuthTab = 'login';
+let currentPage = 'home';
+let currentTxType = 'expense';
+let selectedCategory = 'food';
+let calcExpression = '0';
+
+function loadState() {
+    try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) {
+            const def = getDefaultData();
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(def));
+            return def;
+        }
+        const state = JSON.parse(raw);
+        if (state.user && Object.prototype.hasOwnProperty.call(state.user, 'email')) {
+            delete state.user.email;
+        }
+        return state;
+    } catch (e) {
+        return getDefaultData();
     }
+}
 
-    let user = usersDB.find(u => u.email.toLowerCase() === activeEmail.toLowerCase());
-    if (!user && legacyUser) {
-        usersDB.push(legacyUser);
-        persistUsersDB();
-        user = legacyUser;
+function saveState() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+}
+
+// ==================== CURRENCY & FORMATTING ====================
+function t(key) {
+    return I18N[appState.settings.lang][key] || key;
+}
+
+function formatMoney(amountIDR, forceShow = false) {
+    if (appState.settings.hideBalance && !forceShow) {
+        return '••••••';
     }
-
-    if (user) {
-        localStorage.setItem('sesiUserAktif', user.email);
-        localStorage.setItem('fintech_current_user', JSON.stringify(user));
-        return user;
-    }
-
-    localStorage.removeItem('sesiUserAktif');
-    localStorage.removeItem('fintech_current_user');
-    return null;
-}
-
-function persistUsersDB() {
-    localStorage.setItem('fintech_users', JSON.stringify(usersDB));
-}
-
-function translate(key) {
-    return translations[currentLanguage][key] || translations.en[key] || key;
-}
-
-function getExpenseCategories() {
-    return appConfig.categories.filter(category => typeof category.reportKey === 'string');
-}
-
-function getExpenseCategoryTotals(transactions) {
-    const categories = getExpenseCategories();
-    const totals = Object.fromEntries(categories.map(category => [category.reportKey, 0]));
-    const otherCategory = categories.find(category => category.value === 'Other');
-
-    transactions.forEach(transaction => {
-        if (transaction.type !== 'expense') return;
-        const category = appConfig.categories.find(item => item.value === transaction.category);
-        const reportKey = category && category.reportKey ? category.reportKey : otherCategory.reportKey;
-        totals[reportKey] += Number(transaction.amount) || 0;
-    });
-    return totals;
-}
-
-function populateCategoryOptions(type = 'expense') {
-    const select = document.getElementById('txCategory');
-    select.replaceChildren();
-    const categories = type === 'income'
-        ? appConfig.categories.filter(category => category.value === 'Salary')
-        : appConfig.categories.filter(category => category.value !== 'Salary');
-    categories.forEach(category => {
-        const option = document.createElement('option');
-        option.value = category.value;
-        option.textContent = translate(category.translationKey);
-        select.appendChild(option);
-    });
-}
-
-function renderHomeBreakdown(totals, currentBalance) {
-    const container = document.getElementById('homeBreakdownList');
-    container.replaceChildren();
-    const warning = document.getElementById('categoryBudgetWarning');
-    let warningCategory = null;
-
-    getExpenseCategories().forEach(category => {
-        const row = document.createElement('div');
-        row.className = 'flex items-center justify-between';
-        const categoryTotal = Number(totals[category.reportKey]) || 0;
-        const balance = Number(currentBalance);
-        const ratio = balance > 0
-            ? categoryTotal / balance
-            : categoryTotal > 0 ? Infinity : 0;
-        const percentage = Number.isFinite(ratio) ? Math.round(ratio * 100) : '∞';
-        const statusClass = ratio >= 0.3
-            ? 'text-rose-600'
-            : ratio >= 0.1
-                ? 'text-amber-500'
-                : 'text-emerald-600';
-        const indicatorClass = ratio >= 0.3
-            ? 'bg-rose-600'
-            : ratio >= 0.1
-                ? 'bg-amber-400'
-                : 'bg-emerald-500';
-        if (ratio >= 0.3 && !warningCategory) warningCategory = category;
-        row.innerHTML = `
-            <span class="flex items-center space-x-1.5 text-gray-600">
-                <span class="w-2 h-2 rounded-full ${indicatorClass}"></span>
-                <span>${translate(category.translationKey)}</span>
-            </span>
-            <span class="font-semibold ${statusClass}">${percentage}%</span>
-        `;
-        container.appendChild(row);
-    });
-
-    if (warningCategory) {
-        warning.textContent = translate('categoryBudgetWarning')
-            .replace('{category}', translate(warningCategory.translationKey));
-        warning.classList.remove('hidden');
+    const cur = appState.settings.currency;
+    if (cur === 'USD') {
+        const usd = amountIDR / USD_RATE;
+        return new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: 'USD',
+            minimumFractionDigits: usd % 1 === 0 ? 0 : 2,
+            maximumFractionDigits: 2
+        }).format(usd);
     } else {
-        warning.textContent = '';
-        warning.classList.add('hidden');
+        return 'Rp ' + new Intl.NumberFormat('id-ID', {
+            maximumFractionDigits: 0
+        }).format(Math.round(amountIDR));
     }
 }
 
-async function loadAppConfig() {
-    const response = await fetch('./config.json');
-    if (!response.ok) {
-        throw new Error(`config.json returned HTTP ${response.status}`);
+function inputToIDR(inputVal) {
+    const num = parseFloat(inputVal) || 0;
+    return appState.settings.currency === 'USD' ? num * USD_RATE : num;
+}
+
+function idrToInput(amountIDR) {
+    if (appState.settings.currency === 'USD') {
+        return Number((amountIDR / USD_RATE).toFixed(2));
     }
-
-    const config = await response.json();
-    if (!config || !Array.isArray(config.categories) ||
-        !config.categories.every(category =>
-            category &&
-            typeof category.value === 'string' &&
-            typeof category.translationKey === 'string'
-        ) ||
-        !config.categories.some(category =>
-            category.value === 'Other' &&
-            typeof category.reportKey === 'string' &&
-            typeof category.reportColor === 'string'
-        ) ||
-        new Set(config.categories.map(category => category.value)).size !== config.categories.length) {
-        throw new Error('config.json has an invalid categories definition');
-    }
-    if (config.categories.some(category =>
-        category.reportKey !== undefined &&
-        (typeof category.reportKey !== 'string' ||
-            typeof category.reportColor !== 'string')
-    )) {
-        throw new Error('config.json has invalid report category settings');
-    }
-    const reportKeys = config.categories
-        .filter(category => typeof category.reportKey === 'string')
-        .map(category => category.reportKey);
-    if (new Set(reportKeys).size !== reportKeys.length) {
-        throw new Error('config.json contains duplicate report keys');
-    }
-
-    appConfig = config;
+    return Math.round(amountIDR);
 }
 
-function showConfigLoadError(error) {
-    console.error('Unable to load app configuration:', error);
-    const message = document.createElement('p');
-    message.className = 'mx-6 mb-4 rounded-xl bg-rose-50 p-3 text-sm text-rose-700';
-    message.setAttribute('role', 'alert');
-    message.textContent = 'Konfigurasi kategori gagal dimuat. Jalankan aplikasi melalui server lokal (HTTP), lalu muat ulang halaman.';
-    document.getElementById('authScreen').appendChild(message);
-    document.querySelectorAll('#authScreen input, #authScreen button').forEach(element => {
-        element.disabled = true;
-    });
+function showToast(msg, type = 'success') {
+    const container = document.getElementById('toast-container');
+    const el = document.createElement('div');
+    const bg = type === 'error' ? 'bg-rose-600' : 'bg-slate-900 dark:bg-indigo-600';
+    el.className = `${bg} text-white px-4 py-3 rounded-2xl shadow-xl text-xs font-bold flex items-center justify-between animate-slide-up`;
+    el.innerHTML = `<span>${msg}</span>`;
+    container.appendChild(el);
+    setTimeout(() => {
+        el.style.opacity = '0';
+        el.style.transition = 'opacity 0.3s';
+        setTimeout(() => el.remove(), 300);
+    }, 2600);
 }
 
-function applyLanguage() {
-    document.documentElement.lang = currentLanguage;
-    document.getElementById('languageSelector').value = currentLanguage;
-    document.querySelectorAll('[data-i18n]').forEach(element => {
-        element.textContent = translate(element.dataset.i18n);
-    });
-    document.querySelectorAll('[data-i18n-aria-label]').forEach(element => {
-        const label = translate(element.dataset.i18nAriaLabel);
-        element.setAttribute('aria-label', label);
-        element.title = label;
-    });
-    document.querySelectorAll('[data-i18n-placeholder]').forEach(element => {
-        element.placeholder = translate(element.dataset.i18nPlaceholder);
-    });
-    updateThemeToggleLabel();
-    const isSavingGoal = document.getElementById('txType').value === 'savingsGoal';
-    document.querySelector('#transactionForm button[type="submit"]').textContent =
-        translate(isSavingGoal ? 'saveGoal' : 'saveTransaction');
-    if (appConfig) {
-        const currentType = document.getElementById('txType').value;
-        setModalType(['income', 'expense', 'savingsGoal', 'receivable'].includes(currentType) ? currentType : 'expense', false);
-    }
-    if (currentUser) {
-        updateDashboardUI();
-        if (!document.getElementById('tabReport').classList.contains('hidden')) {
-            renderMiniCalendar();
-            updateReportUI();
-        }
-    }
-}
-
-function translateCategory(category) {
-    const categoryConfig = appConfig.categories.find(item => item.value === category);
-    return categoryConfig ? translate(categoryConfig.translationKey) : category;
-}
-
-function createUserId() {
-    return `USR-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
-}
-
-function calculateAge(birthDate) {
-    const birth = new Date(`${birthDate}T00:00:00`);
-    if (Number.isNaN(birth.getTime())) return null;
-    const today = new Date();
-    let age = today.getFullYear() - birth.getFullYear();
-    if (today.getMonth() < birth.getMonth() ||
-        (today.getMonth() === birth.getMonth() && today.getDate() < birth.getDate())) {
-        age--;
-    }
-    return age;
-}
-
-function ensureUserProfile() {
-    let needsSave = false;
-    if (!currentUser.userId) {
-        currentUser.userId = createUserId();
-        needsSave = true;
-    }
-    if (!Object.prototype.hasOwnProperty.call(currentUser, 'age')) {
-        const ageFromBirthDate = currentUser.birthDate ? calculateAge(currentUser.birthDate) : null;
-        currentUser.age = ageFromBirthDate !== null && ageFromBirthDate >= 1 && ageFromBirthDate <= 130
-            ? ageFromBirthDate
-            : '';
-        needsSave = true;
-    } else if (currentUser.age !== '' &&
-        (!Number.isInteger(currentUser.age) || currentUser.age < 1 || currentUser.age > 130)) {
-        currentUser.age = '';
-        needsSave = true;
-    }
-    if (needsSave) saveUserData();
-}
-
-function stopTileGameSpin() {
-    isTileGameSpinning = false;
-    if (tileGameTimeout !== null) {
-        window.clearTimeout(tileGameTimeout);
-        tileGameTimeout = null;
-    }
-    if (tileGameAutoSpinTimeout !== null) {
-        window.clearTimeout(tileGameAutoSpinTimeout);
-        tileGameAutoSpinTimeout = null;
-    }
-    if (tileGameShatterTimeout !== null) {
-        window.clearTimeout(tileGameShatterTimeout);
-        tileGameShatterTimeout = null;
-    }
-    tileGameReelTimeouts.forEach(timeout => window.clearTimeout(timeout));
-    tileGameReelTimeouts = [];
-    const spinButton = document.getElementById('tileGameSpinButton');
-    if (spinButton) {
-        spinButton.disabled = false;
-        updateTileGameSpinButton();
-    }
-    const board = document.getElementById('tileGameBoard');
-    if (board) {
-        board.classList.remove('is-spinning', 'shatter-left');
-        board.querySelectorAll('.tile-game-reel').forEach(reel => reel.classList.remove('is-spinning'));
-    }
-    const turboButton = document.getElementById('tileGameTurboButton');
-    if (turboButton) turboButton.disabled = false;
-}
-
-function openAccountSubpage(panelId) {
-    const allowedPanels = ['profilePanel', 'tileGamePanel', 'passwordPanel'];
-    if (!allowedPanels.includes(panelId)) return;
-    stopTileGameSpin();
-    document.getElementById('menu-utama-akun').style.display = 'none';
-    document.querySelectorAll('.account-inline-panel').forEach(panel => {
-        panel.style.display = panel.id === panelId ? 'block' : 'none';
-    });
-    stopTileGameBgm();
-
-    if (panelId === 'profilePanel') {
-        document.getElementById('profileIdValue').textContent = currentUser.userId;
-        document.getElementById('editProfileName').value = currentUser.name || '';
-        document.getElementById('editProfileAge').value = currentUser.age || '';
-    } else if (panelId === 'passwordPanel') {
-        document.getElementById('passwordForm').reset();
-        document.getElementById('passwordFormMessage').classList.add('hidden');
-    } else if (panelId === 'tileGamePanel') {
-        ensureTileGameReels();
-        startTileGameBgm();
-    }
-}
-
-function returnToAccountMenu() {
-    stopTileGameSpin();
-    stopTileGameBgm();
-    document.querySelectorAll('.account-inline-panel').forEach(panel => {
-        panel.style.display = 'none';
-    });
-    document.getElementById('menu-utama-akun').style.display = 'block';
-}
-
-function getTileGameAudioContext() {
-    if (!tileGameAudioContext) {
-        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-        if (AudioContextClass) tileGameAudioContext = new AudioContextClass();
-    }
-    if (tileGameAudioContext && tileGameAudioContext.state === 'suspended') {
-        tileGameAudioContext.resume().catch(error => {
-            console.error('Audio tantangan ubin tidak dapat dimulai:', error);
-        });
-    }
-    return tileGameAudioContext;
-}
-
-function startTileGameBgm() {
-    const audioContext = getTileGameAudioContext();
-    if (!audioContext || tileGameBgmInterval !== null) return;
-
-    if (tileGameBgmVoices.length === 0) {
-        tileGameBgmVoices = [
-            { oscillator: audioContext.createOscillator(), gain: audioContext.createGain(), volume: 0.018 },
-            { oscillator: audioContext.createOscillator(), gain: audioContext.createGain(), volume: 0.008 }
-        ];
-        tileGameBgmVoices.forEach((voice, index) => {
-            voice.oscillator.type = index === 0 ? 'sine' : 'triangle';
-            voice.gain.gain.value = 0;
-            voice.oscillator.connect(voice.gain);
-            voice.gain.connect(audioContext.destination);
-            voice.oscillator.start();
-        });
-    }
-
-    const notes = [261.63, 329.63, 392, 329.63, 293.66, 349.23, 440, 349.23];
-    const playNote = () => {
-        if (audioContext.state !== 'running') return;
-        const startTime = audioContext.currentTime;
-        const note = notes[tileGameBgmNoteIndex];
-        const voices = tileGameBgmVoices;
-        voices[0].oscillator.frequency.setTargetAtTime(note, startTime, 0.035);
-        voices[0].gain.gain.setTargetAtTime(voices[0].volume, startTime, 0.04);
-        voices[1].oscillator.frequency.setTargetAtTime(note / 2, startTime, 0.05);
-        voices[1].gain.gain.setTargetAtTime(voices[1].volume, startTime, 0.05);
-        tileGameBgmNoteIndex = (tileGameBgmNoteIndex + 1) % notes.length;
-    };
-
-    tileGameBgmVoices.forEach(voice => {
-        voice.gain.gain.setTargetAtTime(voice.volume, audioContext.currentTime, 0.04);
-    });
-    tileGameBgmNoteIndex = 0;
-    playNote();
-    tileGameBgmInterval = window.setInterval(playNote, 560);
-}
-
-function stopTileGameBgm() {
-    if (tileGameBgmInterval !== null) {
-        window.clearInterval(tileGameBgmInterval);
-        tileGameBgmInterval = null;
-    }
-    tileGameBgmNoteIndex = 0;
-    if (!tileGameAudioContext) return;
-
-    const stopTime = tileGameAudioContext.currentTime;
-    tileGameBgmVoices.forEach(voice => {
-        voice.gain.gain.setValueAtTime(0, stopTime);
-    });
-    if (tileGameAudioContext.state === 'running') {
-        tileGameAudioContext.suspend().catch(error => {
-            console.error('Audio tantangan ubin tidak dapat dihentikan:', error);
-        });
-    }
-}
-
-function ensureTileGameReels() {
-    const board = document.getElementById('tileGameBoard');
-    if (!board || board.querySelector('.tile-game-reel')) return;
-
-    const cells = [...board.querySelectorAll('.tile-game-cell')];
-    if (cells.length === 0 || cells.length % 5 !== 0) {
-        console.error('Papan tantangan ubin harus berisi jumlah ubin yang dapat dibagi rata ke lima kolom.');
-        return;
-    }
-
-    const rowCount = cells.length / 5;
-    const reels = Array.from({ length: 5 }, (_, columnIndex) => {
-        const reel = document.createElement('div');
-        const track = document.createElement('div');
-        const cycle = document.createElement('div');
-        reel.className = 'tile-game-reel';
-        track.className = 'tile-game-reel-track';
-        cycle.className = 'tile-game-reel-cycle';
-
-        for (let rowIndex = 0; rowIndex < rowCount; rowIndex++) {
-            cycle.append(cells[rowIndex * 5 + columnIndex]);
-        }
-        const duplicateCycle = cycle.cloneNode(true);
-        duplicateCycle.setAttribute('aria-hidden', 'true');
-        track.append(cycle, duplicateCycle);
-        reel.append(track);
-        return reel;
-    });
-
-    board.replaceChildren(...reels);
-}
-
-function setTileGameTile(cell, tile) {
-    cell.textContent = tile.glyph;
-    cell.setAttribute('aria-label', tile.name);
-    cell.title = tile.name;
-}
-
-function toggleTileGameTurbo() {
-    if (isTileGameSpinning) return;
-    isTileGameTurbo = !isTileGameTurbo;
-    const turboButton = document.getElementById('tileGameTurboButton');
-    if (!turboButton) return;
-    turboButton.setAttribute('aria-pressed', String(isTileGameTurbo));
-    turboButton.textContent = isTileGameTurbo ? 'MODE: TURBO' : 'MODE: NORMAL';
-}
-
-function playTileShuffleSound(audioContext) {
-    const oscillator = audioContext.createOscillator();
-    const gain = audioContext.createGain();
-    oscillator.type = 'triangle';
-    oscillator.frequency.setValueAtTime(740, audioContext.currentTime);
-    oscillator.frequency.exponentialRampToValueAtTime(180, audioContext.currentTime + 0.18);
-    gain.gain.setValueAtTime(0.045, audioContext.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.18);
-    oscillator.connect(gain);
-    gain.connect(audioContext.destination);
-    oscillator.start();
-    oscillator.stop(audioContext.currentTime + 0.18);
-}
-
-function playTileChime(audioContext) {
-    [659.25, 830.61, 987.77].forEach((frequency, index) => {
-        const startTime = audioContext.currentTime + index * 0.1;
-        const oscillator = audioContext.createOscillator();
-        const gain = audioContext.createGain();
-        oscillator.type = 'sine';
-        oscillator.frequency.setValueAtTime(frequency, startTime);
-        gain.gain.setValueAtTime(0.001, startTime);
-        gain.gain.linearRampToValueAtTime(0.07, startTime + 0.025);
-        gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.32);
-        oscillator.connect(gain);
-        gain.connect(audioContext.destination);
-        oscillator.start(startTime);
-        oscillator.stop(startTime + 0.32);
-    });
-}
-
-function playTileBonusSound(audioContext) {
-    [523.25, 659.25, 783.99, 1046.5].forEach((frequency, index) => {
-        const startTime = audioContext.currentTime + index * 0.13;
-        const oscillator = audioContext.createOscillator();
-        const gain = audioContext.createGain();
-        oscillator.type = 'sine';
-        oscillator.frequency.setValueAtTime(frequency, startTime);
-        gain.gain.setValueAtTime(0.001, startTime);
-        gain.gain.linearRampToValueAtTime(0.065, startTime + 0.03);
-        gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.3);
-        oscillator.connect(gain);
-        gain.connect(audioContext.destination);
-        oscillator.start(startTime);
-        oscillator.stop(startTime + 0.3);
-    });
-}
-
-function spinTileGame() {
-    if (isTileGameSpinning) return;
-
-    const tiles = [
-        { name: 'Naga Hijau', glyph: '🐉' },
-        { name: 'Naga Merah', glyph: '中' },
-        { name: 'Naga Putih', glyph: '白' },
-        { name: 'Kucing Emas', glyph: '貓' },
-        { name: 'Batangan Emas', glyph: '金' },
-        { name: 'Ubin 8 Balok', glyph: '八' },
-        { name: 'SCATTER', glyph: '散' }
-    ];
-    ensureTileGameReels();
-    const board = document.getElementById('tileGameBoard');
-    const message = document.getElementById('tileGameMessage');
-    const spinButton = document.getElementById('tileGameSpinButton');
-    const turboButton = document.getElementById('tileGameTurboButton');
-    const reels = [...board.querySelectorAll('.tile-game-reel')];
-    const rowCount = reels[0]?.querySelector('.tile-game-reel-cycle')?.children.length || 0;
-    if (reels.length !== 5 || rowCount === 0) return;
-    const reelCells = reels.map(reel => [
-        ...reel.querySelector('.tile-game-reel-cycle').querySelectorAll('.tile-game-cell')
-    ]);
-    const isBonusSpin = isFreeSpinMode && freeSpinsSisa > 0;
-    const bonusSpinIndex = 12 - freeSpinsSisa;
-    const bonusMultipliers = [2, 4, 6, 10];
-    const multiplier = isBonusSpin
-        ? bonusMultipliers[Math.min(3, Math.floor(bonusSpinIndex / 3))]
-        : 1;
-    const audioContext = getTileGameAudioContext();
-
-    isTileGameSpinning = true;
-    spinButton.disabled = true;
-    if (turboButton) turboButton.disabled = true;
-    board.classList.add('is-spinning');
-    reels.forEach(reel => reel.classList.add('is-spinning'));
-    message.textContent = isBonusSpin
-        ? `Putaran bonus sedang diacak (${freeSpinsSisa} tersisa)...`
-        : 'Ubin sedang diacak...';
-    if (audioContext) playTileShuffleSound(audioContext);
-    updateTileGameMultipliers(isBonusSpin ? multiplier : 1);
-
-    const makeRandomTile = () => Math.random() < 0.08
-        ? tiles[tiles.length - 1]
-        : tiles[Math.floor(Math.random() * (tiles.length - 1))];
-    const setReelCycle = (reelIndex, rowIndex, tile) => {
-        setTileGameTile(reelCells[reelIndex][rowIndex], tile);
-        const duplicateCell = reels[reelIndex].querySelectorAll(
-            '.tile-game-reel-cycle[aria-hidden="true"] .tile-game-cell'
-        )[rowIndex];
-        setTileGameTile(duplicateCell, tile);
-    };
-    const randomizeReels = () => {
-        reelCells.forEach((cellsForReel, reelIndex) => {
-            cellsForReel.forEach((_, rowIndex) => {
-                setReelCycle(reelIndex, rowIndex, makeRandomTile());
-            });
-        });
-    };
-
-    randomizeReels();
-    const spinDuration = isTileGameTurbo ? 300 : 1_260;
-    const reelStopDelay = isTileGameTurbo ? 50 : 60;
-    tileGameTimeout = window.setTimeout(() => {
-        tileGameTimeout = null;
-        const result = reelCells.map(cellsForReel => cellsForReel.map(() => makeRandomTile()));
-        const stopReel = (reelIndex) => {
-            const reel = reels[reelIndex];
-            reel.classList.remove('is-spinning');
-            reelCells[reelIndex].forEach((_, rowIndex) => {
-                setReelCycle(reelIndex, rowIndex, result[reelIndex][rowIndex]);
-            });
-        };
-        reels.forEach((_, reelIndex) => {
-            const timeout = window.setTimeout(() => stopReel(reelIndex), reelIndex * reelStopDelay);
-            tileGameReelTimeouts.push(timeout);
-        });
-
-        const finishSpin = () => {
-            tileGameReelTimeouts = [];
-            tileGameTimeout = null;
-            isTileGameSpinning = false;
-            board.classList.remove('is-spinning');
-            const flatResult = result.flat();
-            const symbolCounts = flatResult.reduce((counts, tile) => {
-                if (tile.name !== 'SCATTER') counts[tile.name] = (counts[tile.name] || 0) + 1;
-                return counts;
-            }, {});
-            const matchingTiles = Math.max(0, ...Object.values(symbolCounts).filter(count => count >= 3));
-            const scatterCount = flatResult.filter(tile => tile.name === 'SCATTER').length;
-            const bonusTriggered = scatterCount >= 3;
-            const scatterZonk = scatterCount > 0 && !bonusTriggered;
-            const roundPoints = scatterZonk ? 0 : matchingTiles * 10 * multiplier;
-            tileGamePoints += roundPoints;
-            document.getElementById('tileGameWin').textContent = tileGamePoints.toLocaleString('id-ID');
-            if (roundPoints > 0 && matchingTiles >= 3) {
-                board.classList.add('shatter-left');
-                tileGameShatterTimeout = window.setTimeout(() => {
-                    board.classList.remove('shatter-left');
-                    tileGameShatterTimeout = null;
-                }, 620);
-            }
-
-            if (isBonusSpin) {
-                freeSpinsSisa -= 1;
-                freeSpinSessionPoints += roundPoints;
-            }
-            if (bonusTriggered) {
-                freeSpinsSisa = 12;
-                freeSpinSessionPoints = 0;
-            }
-            isFreeSpinMode = freeSpinsSisa > 0;
-
-            if (bonusTriggered) {
-                message.textContent = `Bonus terbuka! ${scatterCount} SCATTER memberi 12 putaran gratis.`;
-            } else if (scatterZonk) {
-                message.textContent = isBonusSpin && freeSpinsSisa === 0
-                    ? `${scatterCount} SCATTER belum cukup untuk bonus. Putaran ini zonk. Sesi gratis selesai dengan ${freeSpinSessionPoints.toLocaleString('id-ID')} poin.`
-                    : `${scatterCount} SCATTER belum cukup untuk bonus. Putaran ini zonk.`;
-            } else if (isBonusSpin && freeSpinsSisa === 0) {
-                message.textContent = `Sesi gratis selesai! Total skor hiburan: ${freeSpinSessionPoints.toLocaleString('id-ID')} poin.`;
-            } else if (roundPoints > 0) {
-                message.textContent = `Kombinasi cocok: +${roundPoints.toLocaleString('id-ID')} poin hiburan.`;
-            } else if (isBonusSpin) {
-                message.textContent = `Putaran bonus selesai. ${freeSpinsSisa} putaran gratis tersisa.`;
-            } else {
-                message.textContent = 'Belum ada kombinasi kali ini. Coba tantangan gratis lagi!';
-            }
-
-            spinButton.disabled = false;
-            if (turboButton) turboButton.disabled = false;
-            updateTileGameSpinButton();
-            updateTileGameMultipliers();
-            if (audioContext) {
-                if (bonusTriggered) playTileBonusSound(audioContext);
-                else if (!scatterZonk) playTileChime(audioContext);
-            }
-            if (isFreeSpinMode && freeSpinsSisa > 0) {
-                tileGameAutoSpinTimeout = window.setTimeout(() => {
-                    tileGameAutoSpinTimeout = null;
-                    spinTileGame();
-                }, 550);
-            }
-        };
-
-        tileGameTimeout = window.setTimeout(finishSpin, (reels.length - 1) * reelStopDelay);
-    }, spinDuration);
-}
-
-function updateTileGameSpinButton() {
-    const spinLabel = document.getElementById('tileGameSpinLabel');
-    const spinButton = document.getElementById('tileGameSpinButton');
-    if (!spinLabel || !spinButton) return;
-
-    spinLabel.textContent = isFreeSpinMode && freeSpinsSisa > 0
-        ? `FREE SPIN: ${freeSpinsSisa}`
-        : 'PUTAR GRATIS';
-    spinButton.setAttribute('aria-label', spinLabel.textContent);
-    spinButton.classList.toggle('is-free-spin', isFreeSpinMode && freeSpinsSisa > 0);
-}
-
-function updateTileGameMultipliers(activeMultiplier) {
-    const multiplierElements = [...document.querySelectorAll('.tile-game-multiplier')];
-    const bonusMultipliers = [2, 4, 6, 10];
-    const isBonus = isFreeSpinMode && freeSpinsSisa > 0;
-    const activeBonusIndex = Math.min(3, Math.floor((12 - freeSpinsSisa) / 3));
-
-    multiplierElements.forEach((element, index) => {
-        const value = isBonus ? bonusMultipliers[index] : [1, 2, 3, 5][index];
-        element.textContent = `x${value}`;
-        element.dataset.multiplier = String(value);
-        element.classList.toggle(
-            'is-active',
-            activeMultiplier !== undefined
-                ? value === activeMultiplier
-                : isBonus ? index === activeBonusIndex : index === 0
-        );
-    });
-    updateTileGameSpinButton();
-}
-
-function formatMoney(amount) {
-    const value = Number(amount) * (currentCurrency === 'IDR' ? USD_TO_IDR : 1);
-    if (currentCurrency === 'IDR') {
-        return `Rp ${value.toLocaleString('id-ID', { maximumFractionDigits: 0 })}`;
-    }
-    return `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-}
-
-function formatRupiah(amount) {
-    return `Rp ${Number(amount).toLocaleString('id-ID', { maximumFractionDigits: 0 })}`;
-}
-
-function escapeHtml(value) {
-    return String(value).replace(/[&<>"']/g, character => ({
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#39;'
-    })[character]);
-}
-
+// ==================== THEME, LANGUAGE & CURRENCY TOGGLES ====================
 function applyTheme() {
-    document.documentElement.classList.toggle('dark-mode', currentTheme === 'dark');
-    document.documentElement.classList.toggle('light-mode', currentTheme === 'light');
-    document.documentElement.style.colorScheme = currentTheme;
-    const toggle = document.getElementById('themeToggle');
-    if (toggle) toggle.setAttribute('aria-pressed', String(currentTheme === 'dark'));
-}
-
-function updateThemeToggleLabel() {
-    const toggle = document.getElementById('themeToggle');
-    if (!toggle) return;
-    const labelKey = currentTheme === 'dark' ? 'lightMode' : 'darkMode';
-    toggle.querySelector('span').textContent = translate(labelKey);
-    toggle.querySelector('i').className = `fa-solid ${currentTheme === 'dark' ? 'fa-sun' : 'fa-moon'}`;
+    const html = document.documentElement;
+    if (appState.settings.theme === 'dark') {
+        html.classList.add('dark');
+    } else {
+        html.classList.remove('dark');
+    }
 }
 
 function toggleTheme() {
-    currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
-    localStorage.setItem('fintech_theme', currentTheme);
+    appState.settings.theme = appState.settings.theme === 'dark' ? 'light' : 'dark';
+    saveState();
     applyTheme();
-    updateThemeToggleLabel();
+    lucide.createIcons();
 }
 
-function updateDigitalClock() {
-    const clock = document.getElementById('digitalClock');
-    if (!clock) return;
-    const parts = new Intl.DateTimeFormat('en-GB', {
-        timeZone: 'Asia/Jakarta',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hourCycle: 'h23'
-    }).formatToParts(new Date());
-    const time = ['hour', 'minute', 'second']
-        .map(partType => parts.find(part => part.type === partType).value)
-        .join(' - ');
-    clock.textContent = time;
+function toggleLanguage() {
+    setLanguage(appState.settings.lang === 'id' ? 'en' : 'id');
 }
 
-function parseTransactionAmount(value) {
-    const normalizedValue = currentCurrency === 'IDR'
-        ? value.replace(/\./g, '')
-        : value.replace(/,/g, '');
-    return normalizedValue.trim() ? Number(normalizedValue) : NaN;
+function setLanguage(lang) {
+    appState.settings.lang = lang;
+    document.documentElement.lang = lang;
+    saveState();
+    applyTranslations();
+    renderAll();
 }
 
-function formatTransactionAmountValue(value) {
-    if (currentCurrency === 'IDR') {
-        return value.replace(/\D/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-    }
-
-    const sanitizedValue = value.replace(/,/g, '').replace(/[^\d.]/g, '');
-    const decimalIndex = sanitizedValue.indexOf('.');
-    const integerDigits = (decimalIndex === -1 ? sanitizedValue : sanitizedValue.slice(0, decimalIndex));
-    const fractionDigits = decimalIndex === -1 ? '' : sanitizedValue.slice(decimalIndex + 1).replace(/\./g, '').slice(0, 2);
-    const groupedInteger = integerDigits.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-    const integerPart = groupedInteger || (decimalIndex !== -1 ? '0' : '');
-    return decimalIndex === -1 ? integerPart : `${integerPart}.${fractionDigits}`;
+function toggleCurrency() {
+    setCurrency(appState.settings.currency === 'IDR' ? 'USD' : 'IDR');
 }
 
-function formatTransactionAmountInput() {
-    const input = document.getElementById('txAmount');
-    const originalValue = input.value;
-    const originalCaret = input.selectionStart === null ? originalValue.length : input.selectionStart;
-    const semanticCharacters = currentCurrency === 'IDR' ? /\d/g : /[\d.]/g;
-    const charactersBeforeCaret = (originalValue.slice(0, originalCaret).match(semanticCharacters) || []).length;
-    const formattedValue = formatTransactionAmountValue(originalValue);
-    input.value = formattedValue;
-
-    let nextCaret = 0;
-    let charactersSeen = 0;
-    for (let index = 0; index < formattedValue.length; index++) {
-        const isSemanticCharacter = currentCurrency === 'IDR'
-            ? /\d/.test(formattedValue[index])
-            : /[\d.]/.test(formattedValue[index]);
-        if (isSemanticCharacter) {
-            charactersSeen++;
-        }
-        nextCaret = index + 1;
-        if (charactersSeen >= charactersBeforeCaret) break;
-    }
-    if (charactersBeforeCaret === 0) nextCaret = 0;
-    input.setSelectionRange(nextCaret, nextCaret);
+function setCurrency(cur) {
+    appState.settings.currency = cur;
+    saveState();
+    renderAll();
 }
 
-function updateCurrencyLabel() {
-    document.getElementById('txCurrencyLabel').textContent = currentCurrency === 'IDR' ? 'Rp' : '$';
-    const amountInput = document.getElementById('txAmount');
-    amountInput.inputMode = currentCurrency === 'IDR' ? 'numeric' : 'decimal';
-    amountInput.placeholder = currentCurrency === 'IDR' ? '0' : '0.00';
+function toggleHideBalance() {
+    appState.settings.hideBalance = !appState.settings.hideBalance;
+    saveState();
+    renderHome();
 }
 
-function applyCardTheme() {
-    const card = document.getElementById('walletCard');
-    card.classList.remove('card-theme-black', 'card-theme-blue', 'card-theme-green', 'card-theme-gold');
-    card.classList.add(`card-theme-${currentCardTheme}`);
-    document.querySelectorAll('[data-card-theme]').forEach(button => {
-        button.setAttribute('aria-pressed', String(button.dataset.cardTheme === currentCardTheme));
+function applyTranslations() {
+    document.documentElement.lang = appState.settings.lang;
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        el.textContent = t(key);
     });
+    const authSubmitBtn = document.getElementById('auth-submit-btn');
+    if (authSubmitBtn) {
+        authSubmitBtn.textContent = t(currentAuthTab === 'login' ? 'loginBtn' : 'registerBtn');
+    }
+    document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+        el.placeholder = t(el.getAttribute('data-i18n-placeholder'));
+    });
+    document.querySelectorAll('[data-i18n-title]').forEach(el => {
+        el.title = t(el.getAttribute('data-i18n-title'));
+    });
+    document.querySelectorAll('[data-i18n-aria-label]').forEach(el => {
+        el.setAttribute('aria-label', t(el.getAttribute('data-i18n-aria-label')));
+    });
+    const searchEl = document.getElementById('history-search');
+    if (searchEl) {
+        searchEl.placeholder = appState.settings.lang === 'id' ? 'Cari nama transaksi...' : 'Search transaction name...';
+    }
+    const authLangLabel = document.getElementById('auth-lang-label');
+    if (authLangLabel) authLangLabel.textContent = appState.settings.lang.toUpperCase();
+    const headerLangBadge = document.getElementById('header-lang-badge');
+    if (headerLangBadge) headerLangBadge.textContent = appState.settings.lang.toUpperCase();
+    const settingsLangSelect = document.getElementById('settings-lang-select');
+    if (settingsLangSelect) settingsLangSelect.value = appState.settings.lang;
 }
 
-function setCardTheme(theme) {
-    if (!['black', 'blue', 'green', 'gold'].includes(theme)) {
-        alert("Tema kartu tidak valid.");
+// ==================== AUTHENTICATION ====================
+function switchAuthTab(tab) {
+    currentAuthTab = tab;
+    const loginBtn = document.getElementById('tab-login-btn');
+    const regBtn = document.getElementById('tab-register-btn');
+    const submitBtn = document.getElementById('auth-submit-btn');
+    const isLogin = tab === 'login';
+    loginBtn.classList.toggle('is-active', isLogin);
+    regBtn.classList.toggle('is-active', !isLogin);
+    loginBtn.setAttribute('aria-selected', String(isLogin));
+    regBtn.setAttribute('aria-selected', String(!isLogin));
+    document.getElementById('auth-pass').autocomplete = isLogin ? 'current-password' : 'new-password';
+    submitBtn.textContent = t(isLogin ? 'loginBtn' : 'registerBtn');
+}
+
+function handleAuthSubmit(e) {
+    e.preventDefault();
+    const name = document.getElementById('auth-name').value.trim();
+    const passInput = document.getElementById('auth-pass');
+    const pin = passInput.value.trim();
+
+    if (!name || !pin) {
+        showToast(t('authRequired'), 'error');
         return;
     }
-    currentCardTheme = theme;
-    localStorage.setItem('fintech_card_theme', currentCardTheme);
-    applyCardTheme();
-}
 
-function setActiveSession(user) {
-    isGuestMode = false;
-    sessionStorage.removeItem('guestSessionExpired');
-    currentUser = user;
-    localStorage.setItem('sesiUserAktif', user.email);
-    localStorage.setItem('fintech_current_user', JSON.stringify(user));
+    passInput.value = '';
+    appState.isLoggedIn = true;
+    appState.user = {
+        name,
+        isGuest: false
+    };
+    saveState();
+    checkAuth();
 }
 
 function loginAsGuest() {
-    sessionStorage.removeItem('guestSessionExpired');
-    isGuestMode = true;
-    currentUser = {
-        name: GUEST_NAME,
-        email: 'guest@session.local',
-        password: '',
-        balance: 0,
-        transactions: [],
-        userId: 'GUEST',
-        age: ''
+    document.getElementById('auth-pass').value = '';
+    appState.isLoggedIn = true;
+    appState.user = {
+        name: 'User',
+        isGuest: true
     };
-    sessionStorage.setItem('isLoggedIn', 'true');
-    sessionStorage.setItem('userName', GUEST_NAME);
-    sessionStorage.setItem('guestUserData', JSON.stringify(currentUser));
-    showMainDashboard();
+    saveState();
+    checkAuth();
 }
 
-// Inisialisasi menunggu konfigurasi kategori dari config.json.
-document.addEventListener('DOMContentLoaded', async () => {
-    try {
-        await loadAppConfig();
-    } catch (error) {
-        showConfigLoadError(error);
-        return;
-    }
+function logout() {
+    document.getElementById('auth-pass').value = '';
+    appState.isLoggedIn = false;
+    saveState();
+    checkAuth();
+}
 
-    document.getElementById('currencySelector').value = currentCurrency;
-    document.getElementById('dailyBudgetDays').value = String(dailyBudgetDays);
-    populateCategoryOptions();
-    updatePaymentMethodOptions('expense');
-    updateCurrencyLabel();
-    applyCardTheme();
-    applyTheme();
-    applyLanguage();
-    updateDigitalClock();
-    window.setInterval(updateDigitalClock, 1_000);
-    document.addEventListener('visibilitychange', () => {
-        if (!document.hidden) updateDigitalClock();
-    });
-
-    if (currentUser) {
-        showMainDashboard();
+function checkAuth() {
+    const authScreen = document.getElementById('auth-screen');
+    const mainApp = document.getElementById('main-app');
+    if (appState.isLoggedIn) {
+        authScreen.classList.add('hidden');
+        mainApp.classList.remove('hidden');
+        renderAll();
     } else {
-        showAuthScreen();
+        authScreen.classList.remove('hidden');
+        mainApp.classList.add('hidden');
     }
-    setupEventListeners();
-});
+    lucide.createIcons();
+}
 
-function setupEventListeners() {
-    document.getElementById('btnGuest').addEventListener('click', loginAsGuest);
+// ==================== NAVIGATION ====================
+function navigateTo(page) {
+    currentPage = page;
+    document.querySelectorAll('.page-section').forEach(sec => sec.classList.add('hidden'));
+    document.getElementById(`page-${page}`).classList.remove('hidden');
 
-    document.getElementById('languageSelector').addEventListener('change', event => {
-        const selectedLanguage = event.target.value;
-        if (!['en', 'id'].includes(selectedLanguage)) {
-            alert("Language selection is invalid.");
-            event.target.value = currentLanguage;
-            return;
+    document.querySelectorAll('.nav-item').forEach(btn => {
+        btn.classList.remove('text-indigo-600', 'dark:text-indigo-400');
+        btn.classList.add('text-slate-400');
+    });
+    const activeNav = document.getElementById(`nav-${page}`);
+    if (activeNav) {
+        activeNav.classList.remove('text-slate-400');
+        activeNav.classList.add('text-indigo-600', 'dark:text-indigo-400');
+    }
+
+    if (page === 'home') renderHome();
+    if (page === 'history') renderHistory();
+    if (page === 'goals') renderGoalsAndDebts();
+    if (page === 'report') renderReport();
+    lucide.createIcons();
+}
+
+// ==================== RENDERING: HOME ====================
+function getGreeting() {
+    const hr = new Date().getHours();
+    if (hr < 12) return t('greetMorning');
+    if (hr < 18) return t('greetAfternoon');
+    return t('greetEvening');
+}
+
+function renderHome() {
+    // Header User & Badges
+    const userName = appState.user.name || 'User';
+    document.getElementById('greeting-text').textContent = getGreeting();
+    document.getElementById('header-username').textContent = userName;
+    document.getElementById('header-avatar').textContent = userName.charAt(0).toUpperCase();
+    document.getElementById('header-currency-badge').textContent = appState.settings.currency === 'IDR' ? 'IDR (Rp)' : 'USD ($)';
+    document.getElementById('header-lang-badge').textContent = appState.settings.lang.toUpperCase();
+
+    // Hide/Show eye icon
+    const showIcon = document.getElementById('eye-icon-show');
+    const hideIcon = document.getElementById('eye-icon-hide');
+    if (appState.settings.hideBalance) {
+        showIcon.classList.add('hidden');
+        hideIcon.classList.remove('hidden');
+    } else {
+        showIcon.classList.remove('hidden');
+        hideIcon.classList.add('hidden');
+    }
+    document.querySelector('[onclick="toggleHideBalance()"]')
+        .setAttribute('aria-label', t(appState.settings.hideBalance ? 'showBalance' : 'hideBalance'));
+
+    // Net Worth
+    const netWorth = appState.wallets.reduce((sum, w) => sum + w.balanceIDR, 0);
+    document.getElementById('net-worth-amount').textContent = formatMoney(netWorth);
+
+    // Current Month Income & Expense
+    const currentYM = new Date().toISOString().slice(0, 7);
+    let monthInc = 0;
+    let monthExp = 0;
+    appState.transactions.forEach(tx => {
+        if (tx.date.startsWith(currentYM)) {
+            if (tx.type === 'income') monthInc += tx.amountIDR;
+            if (tx.type === 'expense') monthExp += tx.amountIDR;
         }
-        currentLanguage = selectedLanguage;
-        localStorage.setItem('fintech_language', currentLanguage);
-        applyLanguage();
     });
+    document.getElementById('home-month-income').textContent = formatMoney(monthInc);
+    document.getElementById('home-month-expense').textContent = formatMoney(monthExp);
 
-    document.getElementById('currencySelector').addEventListener('change', (event) => {
-        const selectedCurrency = event.target.value;
-        if (!['USD', 'IDR'].includes(selectedCurrency)) {
-            alert("Pilihan mata uang tidak valid.");
-            event.target.value = currentCurrency;
-            return;
-        }
+    // Wallets Horizontal Cards
+    const carousel = document.getElementById('wallets-carousel');
+    carousel.innerHTML = appState.wallets.map(w => `
+    <div class="min-w-[155px] bg-gradient-to-br ${w.color} text-white p-4 rounded-2xl shadow-md flex flex-col justify-between shrink-0">
+      <div class="flex items-center justify-between mb-3">
+        <div class="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center">
+          <i data-lucide="${w.icon || 'wallet'}" class="w-4 h-4"></i>
+        </div>
+        <span class="text-[10px] font-bold uppercase tracking-wider bg-white/15 px-2 py-0.5 rounded-full">${appState.settings.currency}</span>
+      </div>
+      <div>
+        <p class="text-xs text-white/80 font-medium truncate">${w.name}</p>
+        <p class="text-sm font-extrabold mt-0.5">${formatMoney(w.balanceIDR)}</p>
+      </div>
+    </div>
+  `).join('');
 
-        const amountInput = document.getElementById('txAmount');
-        const currentAmount = parseTransactionAmount(amountInput.value);
-        const amountInUsd = currentCurrency === 'IDR' ? currentAmount / USD_TO_IDR : currentAmount;
-        currentCurrency = selectedCurrency;
-        localStorage.setItem('fintech_currency', currentCurrency);
-        updateCurrencyLabel();
-        if (Number.isFinite(amountInUsd)) {
-            amountInput.value = formatTransactionAmountValue(
-                currentCurrency === 'IDR'
-                    ? String(Math.round(amountInUsd * USD_TO_IDR))
-                    : amountInUsd.toFixed(2)
-            );
-        }
-        if (currentUser) {
-            updateDashboardUI();
-            updateReportUI();
-        }
-    });
-    document.getElementById('dailyBudgetDays').addEventListener('change', handleDailyBudgetDaysChange);
-    document.getElementById('txAmount').addEventListener('input', event => {
-        formatTransactionAmountInput();
-        event.currentTarget.classList.toggle('is-typing', event.currentTarget.value.length > 0);
-    });
-    document.getElementById('historySearchInput').addEventListener('input', event => {
-        historySearchQuery = event.target.value.trim();
-        renderFullHistory();
-    });
-    document.getElementById('savingsGoalAmount').addEventListener('input', event => {
-        const digits = event.target.value.replace(/\D/g, '');
-        event.target.value = digits ? Number(digits).toLocaleString('id-ID') : '';
-    });
+    // Daily Safe-to-Spend Hero Widget
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const dailyLimitIDR = appState.safeBudget.totalBudgetIDR / (appState.safeBudget.days || 1);
+    const spentTodayIDR = appState.transactions
+        .filter(tx => tx.type === 'expense' && tx.date === todayStr)
+        .reduce((sum, tx) => sum + tx.amountIDR, 0);
 
-    // Login Form Listener
-    document.getElementById('loginForm').addEventListener('submit', (e) => {
-        e.preventDefault();
-        const email = document.getElementById('loginEmail').value.trim();
-        const password = document.getElementById('loginPassword').value.trim();
+    const remainingTodayIDR = Math.max(0, dailyLimitIDR - spentTodayIDR);
+    const pct = dailyLimitIDR > 0 ? (spentTodayIDR / dailyLimitIDR) * 100 : 0;
 
-        const user = usersDB.find(u =>
-            u.email.toLowerCase() === email.toLowerCase() && u.password === password
-        );
-        if (user) {
-            setActiveSession(user);
-            showMainDashboard();
+    document.getElementById('daily-safe-subtitle').textContent = t('targetDaysSub').replace('{days}', appState.safeBudget.days);
+    document.getElementById('daily-safe-remaining').textContent = formatMoney(remainingTodayIDR);
+    document.getElementById('daily-safe-spent').textContent = formatMoney(spentTodayIDR);
+    document.getElementById('daily-safe-limit').textContent = formatMoney(dailyLimitIDR);
+
+    const barEl = document.getElementById('daily-safe-bar');
+    const badgeEl = document.getElementById('daily-safe-badge');
+    barEl.style.width = `${Math.min(100, pct)}%`;
+
+    if (pct >= 100) {
+        barEl.className = 'h-full bg-rose-500 rounded-full transition-all duration-500';
+        badgeEl.className = 'inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-400';
+        badgeEl.textContent = t('safeStatusOver');
+    } else if (pct >= 75) {
+        barEl.className = 'h-full bg-amber-500 rounded-full transition-all duration-500';
+        badgeEl.className = 'inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400';
+        badgeEl.textContent = t('safeStatusWarn');
+    } else {
+        barEl.className = 'h-full bg-emerald-500 rounded-full transition-all duration-500';
+        badgeEl.className = 'inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400';
+        badgeEl.textContent = t('safeStatusGood');
+    }
+
+    // Recent 5 Transactions
+    const recentList = document.getElementById('home-recent-list');
+    const sorted = [...appState.transactions].sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id)).slice(0, 5);
+
+    if (sorted.length === 0) {
+        recentList.innerHTML = renderEmptyState('receipt-text', t('noTransactions'), t('noTransactionsDesc'));
+    } else {
+        recentList.innerHTML = sorted.map(tx => renderTransactionCard(tx, false)).join('');
+    }
+}
+
+function renderEmptyState(icon, title, desc) {
+    return `
+    <div class="bg-white dark:bg-slate-900 rounded-3xl p-7 text-center border border-dashed border-slate-300 dark:border-slate-800">
+      <div class="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-400 mx-auto flex items-center justify-center mb-3">
+        <i data-lucide="${icon}" class="w-6 h-6"></i>
+      </div>
+      <h4 class="font-bold text-sm text-slate-700 dark:text-slate-200">${title}</h4>
+      <p class="text-xs text-slate-400 mt-1 max-w-[240px] mx-auto leading-relaxed">${desc}</p>
+    </div>
+  `;
+}
+
+function getWalletName(id) {
+    const w = appState.wallets.find(item => item.id === id);
+    return w ? w.name : t('walletLabel');
+}
+
+function renderTransactionCard(tx, allowDelete = true) {
+    const cat = CATEGORIES.find(c => c.id === tx.category) || CATEGORIES[7];
+    let sign = '-';
+    let amountColor = 'text-rose-600 dark:text-rose-400';
+    let iconHtml = `<i data-lucide="${cat.icon}" class="w-4 h-4"></i>`;
+    let iconBg = cat.color;
+    let subtitle = `${getWalletName(tx.walletId)} • ${tx.date}`;
+
+    if (tx.type === 'income') {
+        sign = '+';
+        amountColor = 'text-emerald-600 dark:text-emerald-400';
+    } else if (tx.type === 'transfer') {
+        sign = '⇄';
+        amountColor = 'text-indigo-600 dark:text-indigo-400';
+        iconHtml = `<i data-lucide="arrow-left-right" class="w-4 h-4"></i>`;
+        iconBg = 'bg-indigo-100 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-400';
+        subtitle = `${getWalletName(tx.walletId)} → ${getWalletName(tx.toWalletId)}`;
+    }
+
+    return `
+    <div class="bg-white dark:bg-slate-900 p-3.5 rounded-2xl border border-slate-200/60 dark:border-slate-800 flex items-center justify-between gap-3 shadow-sm">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="w-10 h-10 rounded-xl ${iconBg} flex items-center justify-center shrink-0">
+          ${iconHtml}
+        </div>
+        <div class="min-w-0">
+          <p class="font-bold text-xs sm:text-sm text-slate-800 dark:text-slate-100 truncate">${tx.name}</p>
+          <p class="text-[11px] text-slate-400 truncate">${subtitle}</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 shrink-0">
+        <span class="font-extrabold text-xs sm:text-sm ${amountColor}">${sign} ${formatMoney(tx.amountIDR)}</span>
+        ${allowDelete ? `
+          <button onclick="deleteTransaction('${tx.id}')" class="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition" title="${t('deleteTitle')}">
+            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+          </button>
+        ` : ''}
+      </div>
+    </div>
+  `;
+}
+
+// ==================== TRANSACTION MODAL & CALCULATOR ====================
+function openTransactionModal() {
+    calcExpression = '0';
+    document.getElementById('tx-amount-display').value = '0';
+    document.getElementById('calc-expression-preview').textContent = '';
+    document.getElementById('tx-name').value = '';
+    document.getElementById('tx-date').value = new Date().toISOString().slice(0, 10);
+    document.getElementById('tx-currency-symbol').textContent = appState.settings.currency === 'IDR' ? 'Rp' : '$';
+
+    populateWalletSelects();
+    renderCategoryGrid();
+    setTxType('expense');
+    document.getElementById('tx-modal').classList.remove('hidden');
+    lucide.createIcons();
+}
+
+function closeModal(id) {
+    document.getElementById(id).classList.add('hidden');
+}
+
+function setTxType(type) {
+    currentTxType = type;
+    const tabs = ['expense', 'income', 'transfer'];
+    const activeColors = {
+        expense: 'bg-rose-500 text-white',
+        income: 'bg-emerald-500 text-white',
+        transfer: 'bg-indigo-600 text-white'
+    };
+
+    tabs.forEach(tb => {
+        const el = document.getElementById(`tx-tab-${tb}`);
+        if (tb === type) {
+            el.className = `py-2 text-xs font-bold rounded-xl shadow-sm transition ${activeColors[tb]}`;
         } else {
-            alert("Email atau Kata Sandi salah!");
+            el.className = 'py-2 text-xs font-bold rounded-xl text-slate-600 dark:text-slate-300 transition';
         }
     });
 
-    // Register Form Listener
-    document.getElementById('registerForm').addEventListener('submit', (e) => {
-        e.preventDefault();
-        const name = document.getElementById('regName').value.trim();
-        const email = document.getElementById('regEmail').value.trim().toLowerCase();
-        const password = document.getElementById('regPassword').value.trim();
+    const catGroup = document.getElementById('tx-category-group');
+    const toWalletGroup = document.getElementById('tx-wallet-to-group');
+    const fromLabel = document.getElementById('tx-wallet-from-label');
 
-        if (usersDB.some(u => u.email.toLowerCase() === email)) {
-            alert("Email sudah terdaftar!");
-            return;
-        }
-
-        const newUser = {
-            name: name,
-            email: email,
-            password: password,
-            balance: 0,
-            transactions: []
-        };
-
-        usersDB.push(newUser);
-        persistUsersDB();
-        setActiveSession(newUser);
-        showMainDashboard();
-    });
-
-    document.getElementById('editProfileForm').addEventListener('submit', event => {
-        event.preventDefault();
-        const age = Number(document.getElementById('editProfileAge').value);
-        if (!Number.isInteger(age) || age < 1 || age > 130) {
-            alert(translate('invalidAge'));
-            return;
-        }
-
-        const previousProfile = {
-            name: currentUser.name,
-            age: currentUser.age
-        };
-        currentUser.name = document.getElementById('editProfileName').value.trim();
-        currentUser.age = age;
-        try {
-            saveUserData();
-        } catch (error) {
-            Object.assign(currentUser, previousProfile);
-            alert(translate('changesSaveFailed'));
-            return;
-        }
-
-        document.getElementById('userNameDisplay').textContent = currentUser.name;
-        document.getElementById('accountUserName').textContent = currentUser.name;
-        document.getElementById('accountAvatar').textContent = currentUser.name.charAt(0).toUpperCase();
-        document.getElementById('profileIdValue').textContent = currentUser.userId;
-    });
-
-    document.getElementById('passwordForm').addEventListener('submit', event => {
-        event.preventDefault();
-        const currentPassword = document.getElementById('currentPassword').value.trim();
-        const newPassword = document.getElementById('newPassword').value.trim();
-        const confirmPassword = document.getElementById('confirmNewPassword').value.trim();
-        const message = document.getElementById('passwordFormMessage');
-        message.classList.remove('hidden', 'text-emerald-600', 'text-rose-600');
-        message.classList.add('text-rose-600');
-
-        if (currentPassword !== currentUser.password) {
-            message.textContent = translate('incorrectPassword');
-            return;
-        }
-        if (newPassword !== confirmPassword) {
-            message.textContent = translate('passwordMismatch');
-            return;
-        }
-        if (newPassword.length < 6) {
-            message.textContent = translate('passwordTooShort');
-            return;
-        }
-
-        const previousPassword = currentUser.password;
-        currentUser.password = newPassword;
-        try {
-            saveUserData();
-        } catch (error) {
-            currentUser.password = previousPassword;
-            message.textContent = translate('passwordUpdateFailed');
-            return;
-        }
-        message.classList.remove('text-rose-600');
-        message.classList.add('text-emerald-600');
-        message.textContent = translate('passwordUpdated');
-        document.getElementById('passwordForm').reset();
-    });
-
-    document.getElementById('calculatorModal').addEventListener('click', (e) => {
-        if (e.target === e.currentTarget) {
-            closeCalculator();
-        }
-    });
-
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && !document.getElementById('calculatorModal').classList.contains('hidden')) {
-            closeCalculator();
-        }
-    });
-}
-
-// TOGGLE AUTH MODE (Login <-> Register)
-function switchAuthMode() {
-    isAuthRegisterMode = !isAuthRegisterMode;
-    const loginForm = document.getElementById('loginForm');
-    const registerForm = document.getElementById('registerForm');
-    const authTitle = document.getElementById('authTitle');
-    const authSubtitle = document.getElementById('authSubtitle');
-    const authToggleText = document.getElementById('authToggleText');
-
-    if (isAuthRegisterMode) {
-        loginForm.classList.add('hidden');
-        registerForm.classList.remove('hidden');
-        authTitle.textContent = "Buat Akun Baru";
-        authSubtitle.textContent = "Mulai kelola keuangan Anda hari ini dengan saldo awal Rp 0";
-        authToggleText.innerHTML = `Sudah punya akun? <button type="button" onclick="switchAuthMode()" class="text-indigo-600 font-semibold hover:underline">Masuk</button>`;
+    if (type === 'transfer') {
+        catGroup.classList.add('hidden');
+        toWalletGroup.classList.remove('hidden');
+        fromLabel.textContent = t('fromWalletLabel');
     } else {
-        registerForm.classList.add('hidden');
-        loginForm.classList.remove('hidden');
-        authTitle.textContent = "Selamat Datang";
-        authSubtitle.textContent = "Kelola keuangan Anda dengan lebih mudah & modern";
-        authToggleText.innerHTML = `Belum punya akun? <button type="button" onclick="switchAuthMode()" class="text-indigo-600 font-semibold hover:underline">Daftar sekarang</button>`;
+        catGroup.classList.remove('hidden');
+        toWalletGroup.classList.add('hidden');
+        fromLabel.textContent = t('walletLabel');
     }
 }
 
-// TOGGLE PASSWORD VISIBILITY
-function togglePassword(inputId, iconId) {
-    const input = document.getElementById(inputId);
-    const icon = document.getElementById(iconId);
-    if (input.type === 'password') {
-        input.type = 'text';
-        icon.classList.remove('fa-eye-slash');
-        icon.classList.add('fa-eye');
-    } else {
-        input.type = 'password';
-        icon.classList.remove('fa-eye');
-        icon.classList.add('fa-eye-slash');
-    }
+function renderCategoryGrid() {
+    const grid = document.getElementById('tx-category-grid');
+    grid.innerHTML = CATEGORIES.map(cat => {
+        const active = selectedCategory === cat.id
+            ? 'ring-2 ring-indigo-600 bg-indigo-50/70 dark:bg-indigo-950/60'
+            : 'bg-slate-50 dark:bg-slate-800/70';
+        return `
+      <button type="button" onclick="selectCategory('${cat.id}')" class="p-2 rounded-xl flex flex-col items-center gap-1 transition ${active}">
+        <div class="w-7 h-7 rounded-lg ${cat.color} flex items-center justify-center">
+          <i data-lucide="${cat.icon}" class="w-3.5 h-3.5"></i>
+        </div>
+        <span class="text-[10px] font-bold text-slate-700 dark:text-slate-200 truncate w-full text-center">${t(cat.labelKey)}</span>
+      </button>
+    `;
+    }).join('');
 }
 
-// NAVIGASI LAYAR
-function showAuthScreen() {
-    document.getElementById('authScreen').classList.remove('hidden');
-    document.getElementById('mainDashboard').classList.add('hidden');
+function selectCategory(catId) {
+    selectedCategory = catId;
+    renderCategoryGrid();
+    lucide.createIcons();
 }
 
-function showMainDashboard() {
-    document.getElementById('authScreen').classList.add('hidden');
-    document.getElementById('mainDashboard').classList.remove('hidden');
-    ensureUserProfile();
-    
-    // Set User Info
-    document.getElementById('userNameDisplay').textContent = currentUser.name;
-    document.getElementById('accountUserName').textContent = currentUser.name;
-    document.getElementById('accountAvatar').textContent = currentUser.name.charAt(0).toUpperCase();
-    
-    // Set Current Date Header
-    applyLanguage();
-
-    updateDashboardUI();
-    switchTab('home');
-}
-
-function logoutUser() {
-    currentUser = null;
-    if (isGuestMode) {
-        GUEST_SESSION_KEYS.forEach(key => sessionStorage.removeItem(key));
-        sessionStorage.setItem('guestSessionExpired', 'true');
-        isGuestMode = false;
-    }
-    localStorage.removeItem('sesiUserAktif');
-    localStorage.removeItem('fintech_current_user');
-    showAuthScreen();
-}
-
-// TAB NAVIGASI UTAMA
-function switchTab(tabName) {
-    const tabs = ['home', 'history', 'report', 'account'];
-    tabs.forEach(t => {
-        const el = document.getElementById(`tab${t.charAt(0).toUpperCase() + t.slice(1)}`);
-        const navEl = document.getElementById(`nav${t.charAt(0).toUpperCase() + t.slice(1)}`);
-        if (t === tabName) {
-            el.classList.remove('hidden');
-            if (navEl) {
-                navEl.classList.remove('text-gray-400');
-                navEl.classList.add('text-indigo-400');
-            }
-        } else {
-            el.classList.add('hidden');
-            if (navEl) {
-                navEl.classList.remove('text-indigo-400');
-                navEl.classList.add('text-gray-400');
-            }
-        }
+function populateWalletSelects() {
+    const options = appState.wallets.map(w => `<option value="${w.id}">${w.name} (${formatMoney(w.balanceIDR, true)})</option>`).join('');
+    ['tx-wallet-from', 'tx-wallet-to', 'topup-wallet-select', 'debt-wallet-select'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = options;
     });
-
-    if (tabName === 'report') {
-        renderMiniCalendar();
-        updateReportUI();
+    const toEl = document.getElementById('tx-wallet-to');
+    if (toEl && appState.wallets.length > 1) {
+        toEl.selectedIndex = 1;
     }
 }
 
-// TOGGLE SENSOR SALDO
-function toggleBalanceSensor() {
-    isBalanceSensorHidden = !isBalanceSensorHidden;
-    const icon = document.getElementById('balanceSensorIcon');
-    if (isBalanceSensorHidden) {
-        icon.classList.remove('fa-eye');
-        icon.classList.add('fa-eye-slash');
-        document.getElementById('displayBalance').textContent = '****';
-    } else {
-        icon.classList.remove('fa-eye-slash');
-        icon.classList.add('fa-eye');
-        updateBalanceDisplay();
-    }
-    updateWalletGoalCard();
+function toggleCalculator() {
+    document.getElementById('calc-keypad').classList.toggle('hidden');
 }
 
-function updateBalanceDisplay() {
-    updateDailyAllowance();
-    if (!isBalanceSensorHidden) {
-        const balance = currentUser.balance || 0;
-        document.getElementById('displayBalance').textContent = formatMoney(balance);
-    }
-    updateDailyBudget();
-}
+function calcInput(key) {
+    const display = document.getElementById('tx-amount-display');
+    const preview = document.getElementById('calc-expression-preview');
 
-function updateDailyAllowance() {
-    const allowanceElement = document.getElementById('dailyAllowance');
-    const balance = Number(currentUser && currentUser.balance);
-    const today = new Date();
-    const daysRemaining = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate() - today.getDate() + 1;
-    const dailyAllowance = Number.isFinite(balance) && daysRemaining > 0 ? balance / daysRemaining : 0;
-    const warningThreshold = currentCurrency === 'IDR' ? 20000 : 1.5;
-
-    allowanceElement.textContent = isBalanceSensorHidden
-        ? `${currentLanguage === 'id' ? 'Jatah aman harian' : 'Safe daily budget'}: ****`
-        : `${currentLanguage === 'id' ? 'Jatah aman harian' : 'Safe daily budget'}: ${formatMoney(dailyAllowance)}`;
-    allowanceElement.classList.toggle('daily-allowance-warning', !isBalanceSensorHidden && dailyAllowance < warningThreshold);
-}
-
-function updateDailyBudget() {
-    if (!currentUser) return;
-    const balance = Number(currentUser.balance) || 0;
-    const dailyAllowance = Math.max(0, balance) / dailyBudgetDays;
-    const now = new Date();
-    const spentToday = (currentUser.transactions || []).reduce((total, transaction) => {
-        if (transaction.type !== 'expense') return total;
-        const transactionDate = new Date(transaction.date);
-        return transactionDate.getFullYear() === now.getFullYear() &&
-            transactionDate.getMonth() === now.getMonth() &&
-            transactionDate.getDate() === now.getDate()
-            ? total + (Number(transaction.amount) || 0)
-            : total;
-    }, 0);
-    const ratio = dailyAllowance > 0 ? spentToday / dailyAllowance : spentToday > 0 ? Infinity : 0;
-    const color = ratio <= 0.8 ? '#4ade80' : ratio <= 1 ? '#facc15' : '#f87171';
-    const percentage = Number.isFinite(ratio) ? Math.min(100, Math.round(ratio * 100)) : 100;
-    const allowanceElement = document.getElementById('dailyBudgetAllowance');
-    const spentElement = document.getElementById('dailyBudgetSpent');
-    const progress = document.getElementById('dailyBudgetProgress');
-    const track = progress.parentElement;
-    const targetInput = document.getElementById('dailyBudgetDays');
-
-    allowanceElement.textContent = isBalanceSensorHidden
-        ? `•••• / ${currentLanguage === 'id' ? 'hari' : 'day'}`
-        : `${formatMoney(dailyAllowance)} / ${currentLanguage === 'id' ? 'hari' : 'day'}`;
-    spentElement.textContent = isBalanceSensorHidden ? '••••' : formatMoney(spentToday);
-    allowanceElement.style.color = color;
-    spentElement.style.color = color;
-    progress.style.width = `${percentage}%`;
-    progress.style.backgroundColor = color;
-    track.setAttribute('aria-valuenow', String(percentage));
-    targetInput.value = String(dailyBudgetDays);
-}
-
-function handleDailyBudgetDaysChange(event) {
-    const targetDays = Number(event.currentTarget.value);
-    if (!Number.isInteger(targetDays) || targetDays < 1 || targetDays > 365) {
-        alert(translate('invalidTargetDays'));
-        event.currentTarget.value = String(dailyBudgetDays);
-        return;
-    }
-
-    dailyBudgetDays = targetDays;
-    localStorage.setItem('fintech_daily_budget_days', String(dailyBudgetDays));
-    updateDailyBudget();
-}
-
-// MODAL TRANSAKSI (TAMBAH PEMASUKAN / PENGELUARAN)
-function openTransactionModal(type = 'expense') {
-    editingTransactionIndex = null;
-    document.getElementById('editingTransactionIndex').value = '';
-    document.getElementById('transactionForm').reset();
-    document.getElementById('transactionModal').classList.remove('hidden');
-    if (type === 'savingsGoal' && currentUser.savingsGoal) {
-        document.getElementById('savingsGoalName').value = currentUser.savingsGoal.name;
-        document.getElementById('savingsGoalAmount').value = Number(currentUser.savingsGoal.amount).toLocaleString('id-ID');
-    }
-    setModalType(type);
-}
-
-function closeTransactionModal() {
-    closeCalculator();
-    document.getElementById('transactionModal').classList.add('hidden');
-    document.getElementById('transactionForm').reset();
-    editingTransactionIndex = null;
-    document.getElementById('editingTransactionIndex').value = '';
-}
-
-function openCalculator() {
-    const amountInput = document.getElementById('txAmount');
-    const initialValue = parseTransactionAmount(amountInput.value);
-    calculatorDisplayValue = amountInput.value && Number.isFinite(initialValue)
-        ? String(initialValue)
-        : '0';
-    calculatorStoredValue = null;
-    calculatorPendingOperator = null;
-    calculatorWaitingForOperand = false;
-    updateCalculatorDisplay();
-    document.getElementById('calculatorModal').classList.remove('hidden');
-}
-
-function closeCalculator() {
-    document.getElementById('calculatorModal').classList.add('hidden');
-}
-
-function updateCalculatorDisplay() {
-    document.getElementById('calculatorDisplay').textContent = calculatorDisplayValue;
-    const expression = calculatorStoredValue !== null && calculatorPendingOperator
-        ? `${calculatorStoredValue} ${calculatorPendingOperator}`
-        : '';
-    document.getElementById('calculatorExpression').textContent = expression;
-}
-
-function formatCalculatorResult(value) {
-    if (!Number.isFinite(value)) {
-        return 'Error';
-    }
-    return String(Number(value.toPrecision(12)));
-}
-
-function calculateResult(left, right, operator) {
-    if (operator === '+') return left + right;
-    if (operator === '-') return left - right;
-    if (operator === '*') return left * right;
-    if (operator === '/') return right === 0 ? NaN : left / right;
-    return right;
-}
-
-function calculatorInput(key) {
     if (key === 'AC') {
-        calculatorDisplayValue = '0';
-        calculatorStoredValue = null;
-        calculatorPendingOperator = null;
-        calculatorWaitingForOperand = false;
-    } else if (key === '⌫') {
-        if (!calculatorWaitingForOperand && calculatorDisplayValue !== 'Error') {
-            calculatorDisplayValue = calculatorDisplayValue.length > 1
-                ? calculatorDisplayValue.slice(0, -1)
-                : '0';
-            if (calculatorDisplayValue === '-') calculatorDisplayValue = '0';
-        }
-    } else if (key === '%') {
-        if (calculatorDisplayValue !== 'Error') {
-            calculatorDisplayValue = formatCalculatorResult(Number(calculatorDisplayValue) / 100);
-            calculatorWaitingForOperand = true;
-        }
-    } else if (key === '±') {
-        if (calculatorDisplayValue !== 'Error' && Number(calculatorDisplayValue) !== 0) {
-            calculatorDisplayValue = calculatorDisplayValue.startsWith('-')
-                ? calculatorDisplayValue.slice(1)
-                : `-${calculatorDisplayValue}`;
-        }
-    } else if (['+', '-', '*', '/'].includes(key)) {
-        if (calculatorDisplayValue === 'Error') return;
-        const inputValue = Number(calculatorDisplayValue);
-        if (calculatorStoredValue !== null && calculatorPendingOperator && !calculatorWaitingForOperand) {
-            calculatorDisplayValue = formatCalculatorResult(
-                calculateResult(calculatorStoredValue, inputValue, calculatorPendingOperator)
-            );
-            if (calculatorDisplayValue === 'Error') {
-                calculatorStoredValue = null;
-                calculatorPendingOperator = null;
-                calculatorWaitingForOperand = true;
-                updateCalculatorDisplay();
-                return;
+        calcExpression = '0';
+        preview.textContent = '';
+        display.value = '0';
+        return;
+    }
+
+    if (key === 'BACK') {
+        calcExpression = calcExpression.length > 1 ? calcExpression.slice(0, -1) : '0';
+        display.value = calcExpression;
+        return;
+    }
+
+    if (key === '=') {
+        try {
+            const sanitized = calcExpression.replace(/×/g, '*').replace(/÷/g, '/');
+            if (/^[0-9+\-*/.() ]+$/.test(sanitized)) {
+                const result = Function('"use strict";return (' + sanitized + ')')();
+                const roundedResult = Math.round(result * 100) / 100;
+                if (!Number.isFinite(result) || !Number.isFinite(roundedResult)) {
+                    throw new RangeError('Calculator result must be finite.');
+                }
+                const rounded = Math.max(0, roundedResult);
+                preview.textContent = calcExpression + ' =';
+                calcExpression = String(rounded);
+                display.value = calcExpression;
             }
+        } catch {
+            display.value = '0';
+            calcExpression = '0';
         }
-        calculatorStoredValue = Number(calculatorDisplayValue);
-        calculatorPendingOperator = key;
-        calculatorWaitingForOperand = true;
-    } else if (key === '=') {
-        if (calculatorPendingOperator && calculatorStoredValue !== null && calculatorDisplayValue !== 'Error') {
-            calculatorDisplayValue = formatCalculatorResult(
-                calculateResult(calculatorStoredValue, Number(calculatorDisplayValue), calculatorPendingOperator)
-            );
-        }
-        if (calculatorDisplayValue === 'Error') {
-            updateCalculatorDisplay();
-            return;
-        }
-        const calculatorResult = Number(calculatorDisplayValue);
-        document.getElementById('txAmount').value = formatTransactionAmountValue(
-            currentCurrency === 'IDR' ? String(Math.round(calculatorResult)) : calculatorDisplayValue
-        );
-        closeCalculator();
-        return;
-    } else if (/^\d$/.test(key) || key === '.') {
-        if (calculatorDisplayValue === 'Error' || calculatorWaitingForOperand) {
-            calculatorDisplayValue = key === '.' ? '0.' : key;
-            calculatorWaitingForOperand = false;
-        } else if (key !== '.' || !calculatorDisplayValue.includes('.')) {
-            calculatorDisplayValue = calculatorDisplayValue === '0' && key !== '.'
-                ? key
-                : calculatorDisplayValue + key;
-        }
-    }
-
-    updateCalculatorDisplay();
-}
-
-function updatePaymentMethodOptions(type) {
-    const select = document.getElementById('txPaymentMethod');
-    const label = document.querySelector('label[for="txPaymentMethod"]');
-    const selectedValue = select.value;
-    const isIncome = type === 'income';
-    const options = isIncome
-        ? [
-            { value: 'BANK', label: 'BANK' },
-            { value: 'EWALET', label: 'EWALET' },
-            { value: 'Cash', label: 'CASH' }
-        ]
-        : [
-            { value: 'Cash', label: translate('cash') },
-            { value: 'Transfer / Tf', label: translate('transferTf') },
-            { value: 'Other', label: translate('other') }
-        ];
-
-    label.textContent = translate(isIncome ? 'uangKu' : 'paymentMethod');
-    select.replaceChildren();
-    options.forEach(optionData => {
-        const option = document.createElement('option');
-        option.value = optionData.value;
-        option.textContent = optionData.label;
-        select.appendChild(option);
-    });
-    if (options.some(option => option.value === selectedValue)) {
-        select.value = selectedValue;
-    }
-}
-
-function setModalType(type, focusAmount = true) {
-    if (!['income', 'expense', 'savingsGoal', 'receivable'].includes(type)) return;
-
-    const buttons = {
-        income: document.getElementById('typeIncomeBtn'),
-        expense: document.getElementById('typeExpenseBtn'),
-        savingsGoal: document.getElementById('typeSavingsGoalBtn'),
-        receivable: document.getElementById('typeReceivableBtn')
-    };
-    const isSavingsGoal = type === 'savingsGoal';
-    const isReceivable = type === 'receivable';
-    const isIncome = type === 'income';
-    const amountField = document.getElementById('transactionAmountFields');
-    const titleField = document.getElementById('transactionTitleField');
-    const categoryField = document.getElementById('transactionCategoryField');
-    const paymentField = document.getElementById('transactionPaymentMethodField');
-    const goalFields = document.getElementById('savingsGoalFields');
-
-    document.getElementById('txType').value = type;
-    Object.entries(buttons).forEach(([buttonType, button]) => {
-        const isActive = buttonType === type;
-        button.setAttribute('aria-pressed', String(isActive));
-        button.classList.toggle('bg-indigo-600', isActive);
-        button.classList.toggle('text-white', isActive);
-        button.classList.toggle('shadow-sm', isActive);
-        button.classList.toggle('bg-white', !isActive);
-        button.classList.toggle('text-gray-500', !isActive);
-    });
-    amountField.classList.toggle('hidden', isSavingsGoal);
-    amountField.querySelectorAll('input, select, button').forEach(control => {
-        control.disabled = isSavingsGoal;
-    });
-    titleField.classList.toggle('hidden', (isIncome && editingTransactionIndex === null) || isSavingsGoal);
-    titleField.querySelector('label').textContent = translate(isReceivable ? 'borrowerName' : 'transactionName');
-    titleField.querySelector('input').placeholder = translate(isReceivable ? 'borrowerPlaceholder' : 'transactionPlaceholder');
-    titleField.querySelector('input').disabled = (isIncome && editingTransactionIndex === null) || isSavingsGoal;
-    titleField.querySelector('input').required = (!isIncome || editingTransactionIndex !== null) && !isSavingsGoal;
-    categoryField.classList.toggle('hidden', isSavingsGoal || isReceivable);
-    categoryField.querySelector('select').disabled = isSavingsGoal || isReceivable;
-    paymentField.classList.toggle('hidden', isSavingsGoal);
-    paymentField.querySelector('select').disabled = isSavingsGoal;
-    goalFields.classList.toggle('hidden', !isSavingsGoal);
-    goalFields.querySelectorAll('input').forEach(input => {
-        input.disabled = !isSavingsGoal;
-        input.required = isSavingsGoal;
-    });
-
-    if (appConfig) {
-        populateCategoryOptions(isIncome ? 'income' : 'expense');
-        updatePaymentMethodOptions(isIncome ? 'income' : 'expense');
-    }
-    document.getElementById('modalTitle').textContent = translate(
-        editingTransactionIndex !== null
-            ? 'editTransaction'
-            : isSavingsGoal ? 'savingsGoal' : isReceivable ? 'receivable' : isIncome ? 'incomeTitle' : 'expenseTitle'
-    );
-    document.querySelector('#transactionForm button[type="submit"]').textContent =
-        translate(isSavingsGoal ? 'saveGoal' : 'saveTransaction');
-    if (focusAmount) focusActiveTransactionAmount(type);
-}
-
-function focusActiveTransactionAmount(type) {
-    const modal = document.getElementById('transactionModal');
-    if (modal.classList.contains('hidden')) return;
-
-    const amountInput = document.getElementById(
-        type === 'savingsGoal' ? 'savingsGoalAmount' : 'txAmount'
-    );
-    if (amountInput.disabled || amountInput.closest('.hidden')) return;
-
-    if (amountInput.id === 'txAmount') {
-        amountInput.classList.toggle('is-typing', amountInput.value.length > 0);
-    }
-    window.requestAnimationFrame(() => amountInput.focus());
-}
-
-function handleTransactionSubmit(e) {
-    e.preventDefault();
-    const type = document.getElementById('txType').value;
-    if (type === 'savingsGoal') {
-        const savingsGoalName = document.getElementById('savingsGoalName').value.trim();
-        const savingsGoalAmount = Number(
-            document.getElementById('savingsGoalAmount').value.replace(/[^\d]/g, '')
-        );
-        saveSavingsGoal(savingsGoalName, savingsGoalAmount);
         return;
     }
 
-    const amount = parseTransactionAmount(document.getElementById('txAmount').value);
-    const title = document.getElementById('txTitle').value.trim();
-    const category = type === 'receivable' ? '' : document.getElementById('txCategory').value;
-    const paymentMethod = document.getElementById('txPaymentMethod').value;
-
-    if (editingTransactionIndex !== null) {
-        updateTransaction(editingTransactionIndex, type, amount, title, category, paymentMethod);
-        return;
-    }
-    saveTransaction(type, amount, title, category, paymentMethod);
-}
-
-function alertForGamblingTransaction(title) {
-    if (!/\b(judi|slot|gacor|depo)\b/i.test(title) || !window.speechSynthesis || !window.SpeechSynthesisUtterance) {
-        return;
-    }
-
-    const utterance = new SpeechSynthesisUtterance('Udah gede jangang gitu terus cok!');
-    utterance.lang = 'id-ID';
-    utterance.rate = 1.35;
-    utterance.pitch = 1.25;
-    utterance.volume = 1.0;
-    window.speechSynthesis.speak(utterance);
-}
-
-function saveTransaction(type, amount, title, category, paymentMethod) {
-    if (!Number.isFinite(amount) || amount <= 0) {
-        alert("Masukkan jumlah nominal yang valid.");
-        return;
-    }
-    if (!currentUser || !['income', 'expense', 'receivable'].includes(type) || (!title && type !== 'income')) {
-        alert("Transaksi tidak dapat disimpan.");
-        return;
-    }
-    const validPaymentMethods = type === 'income'
-        ? ['BANK', 'EWALET', 'Cash']
-        : ['Cash', 'Transfer / Tf', 'Other'];
-    if (type !== 'receivable' && !validPaymentMethods.includes(paymentMethod)) {
-        alert("Pilih metode pembayaran yang valid.");
-        return;
-    }
-
-    const amountInUsd = currentCurrency === 'IDR' ? amount / USD_TO_IDR : amount;
-    const transactionTitle = title || (type === 'income'
-        ? `${translate('income')} - ${paymentMethod}`
-        : '');
-    const newTx = {
-        id: Date.now(),
-        type: type,
-        title: transactionTitle,
-        category: category,
-        paymentMethod: paymentMethod,
-        amount: amountInUsd,
-        date: new Date().toISOString(),
-        ...(type === 'receivable' ? { settled: false } : {})
-    };
-
-    if (!currentUser.transactions) {
-        currentUser.balance = 0;
-        currentUser.transactions = [];
-    }
-
-    currentUser.balance += type === 'income' ? amountInUsd : -amountInUsd;
-
-    currentUser.transactions.unshift(newTx);
-    saveUserData();
-    closeTransactionModal();
-    updateDashboardUI();
-    updateReportUI();
-    displayedCalendarMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-    renderMiniCalendar();
-    alertForGamblingTransaction(title);
-}
-
-function openEditTransactionModal(transactionIndex) {
-    const transaction = currentUser && currentUser.transactions && currentUser.transactions[transactionIndex];
-    if (!transaction || !['income', 'expense', 'receivable'].includes(transaction.type)) {
-        alert(currentLanguage === 'id' ? 'Transaksi tidak ditemukan.' : 'Transaction not found.');
-        return;
-    }
-
-    openTransactionModal(transaction.type);
-    editingTransactionIndex = transactionIndex;
-    document.getElementById('editingTransactionIndex').value = String(transactionIndex);
-    setModalType(transaction.type, false);
-
-    const amountInput = document.getElementById('txAmount');
-    amountInput.value = formatTransactionAmountValue(
-        currentCurrency === 'IDR'
-            ? String(Math.round(Number(transaction.amount) * USD_TO_IDR))
-            : Number(transaction.amount).toFixed(2)
-    );
-    document.getElementById('txTitle').value = transaction.title || '';
-    document.getElementById('txTitle').disabled = false;
-    document.getElementById('txTitle').required = true;
-    document.getElementById('txCategory').value = transaction.category || '';
-
-    const paymentSelect = document.getElementById('txPaymentMethod');
-    if (transaction.paymentMethod && ![...paymentSelect.options].some(option => option.value === transaction.paymentMethod)) {
-        const option = document.createElement('option');
-        option.value = transaction.paymentMethod;
-        option.textContent = transaction.paymentMethod;
-        paymentSelect.appendChild(option);
-    }
-    paymentSelect.value = transaction.paymentMethod || paymentSelect.value;
-    document.getElementById('modalTitle').textContent = translate('editTransaction');
-    amountInput.classList.toggle('is-typing', amountInput.value.length > 0);
-}
-
-function recalculateBalanceFromTransactions(transactions) {
-    return transactions.reduce((balance, transaction) => {
-        const amount = Number(transaction.amount) || 0;
-        if (transaction.type === 'income') return balance + amount;
-        if (transaction.type === 'expense' || (transaction.type === 'receivable' && !transaction.settled)) {
-            return balance - amount;
-        }
-        return balance;
-    }, 0);
-}
-
-function updateTransaction(transactionIndex, type, amount, title, category, paymentMethod) {
-    const transactions = currentUser && currentUser.transactions;
-    const transaction = transactions && transactions[transactionIndex];
-    if (!transaction || !Number.isInteger(transactionIndex) ||
-        !['income', 'expense', 'receivable'].includes(type) ||
-        !Number.isFinite(amount) || amount <= 0 ||
-        (!title && type !== 'income')) {
-        alert(currentLanguage === 'id' ? 'Transaksi tidak dapat diperbarui karena datanya tidak valid.' : 'Transaction cannot be updated because its data is invalid.');
-        return;
-    }
-    if (transaction.receivablePaymentFor !== undefined && type !== 'income') {
-        alert(currentLanguage === 'id'
-            ? 'Pembayaran piutang harus tetap bertipe pemasukan.'
-            : 'A receivable payment must remain an income transaction.');
-        return;
-    }
-
-    const validPaymentMethods = type === 'income'
-        ? ['BANK', 'EWALET', 'Cash', 'Local']
-        : ['Cash', 'Transfer / Tf', 'Other'];
-    if (type !== 'receivable' && !validPaymentMethods.includes(paymentMethod)) {
-        alert(currentLanguage === 'id' ? 'Pilih metode pembayaran yang valid.' : 'Select a valid payment method.');
-        return;
-    }
-
-    const amountInUsd = currentCurrency === 'IDR' ? amount / USD_TO_IDR : amount;
-    const wasSettledReceivable = transaction.type === 'receivable' && transaction.settled;
-    const linkedPayment = wasSettledReceivable
-        ? transactions.find(item => item.receivablePaymentFor === transaction.id)
-        : null;
-    transaction.type = type;
-    transaction.title = title || `${translate('income')} - ${paymentMethod}`;
-    transaction.category = category;
-    transaction.paymentMethod = paymentMethod;
-    transaction.amount = amountInUsd;
-
-    if (type === 'receivable') {
-        if (wasSettledReceivable) {
-            transaction.settled = true;
-            if (linkedPayment) {
-                linkedPayment.amount = amountInUsd;
-                linkedPayment.title = `${translate('receivable')}: ${transaction.title}`;
-            }
+    const operators = ['+', '-', '×', '÷'];
+    if (calcExpression === '0' && !operators.includes(key) && key !== '.') {
+        calcExpression = key === '000' ? '0' : key;
+    } else {
+        const lastChar = calcExpression.slice(-1);
+        if (operators.includes(lastChar) && operators.includes(key)) {
+            calcExpression = calcExpression.slice(0, -1) + key;
         } else {
-            transaction.settled = false;
-            delete transaction.settledAt;
-        }
-    } else {
-        delete transaction.settled;
-        delete transaction.settledAt;
-        if (wasSettledReceivable) {
-            currentUser.transactions = transactions.filter(item => item.receivablePaymentFor !== transaction.id);
+            calcExpression += key;
         }
     }
-
-    currentUser.balance = recalculateBalanceFromTransactions(currentUser.transactions);
-    saveUserData();
-    closeTransactionModal();
-    updateDashboardUI();
-    updateReportUI();
-    renderMiniCalendar();
+    display.value = calcExpression;
 }
 
-function markReceivablePaid(transactionIndex) {
-    const transactions = currentUser && currentUser.transactions;
-    const receivable = transactions && transactions[transactionIndex];
-    if (!receivable || receivable.type !== 'receivable' || receivable.settled) {
-        alert(currentLanguage === 'id' ? 'Piutang tidak ditemukan atau sudah lunas.' : 'Receivable not found or already paid.');
-        return;
-    }
-    const amount = Number(receivable.amount);
-    if (!Number.isFinite(amount) || amount <= 0 || !Number.isFinite(Number(currentUser.balance))) {
-        alert(currentLanguage === 'id' ? 'Data piutang tidak valid.' : 'Receivable data is invalid.');
+function saveTransaction(e) {
+    e.preventDefault();
+    // Auto-evaluate if expression still has operators
+    calcInput('=');
+    const rawVal = parseFloat(document.getElementById('tx-amount-display').value) || 0;
+    if (rawVal <= 0) {
+        showToast(t('toastInvalidAmount'), 'error');
         return;
     }
 
-    const confirmation = translate('confirmLoanPaid')
-        .replace('{title}', receivable.title)
-        .replace('{amount}', formatMoney(amount));
-    if (!confirm(confirmation)) return;
+    const amountIDR = inputToIDR(rawVal);
+    const name = document.getElementById('tx-name').value.trim();
+    const walletId = document.getElementById('tx-wallet-from').value;
+    const toWalletId = document.getElementById('tx-wallet-to').value;
+    const date = document.getElementById('tx-date').value;
 
-    receivable.settled = true;
-    receivable.settledAt = new Date().toISOString();
-    currentUser.balance = Number(currentUser.balance) + amount;
-    transactions.unshift({
-        id: `receivable-payment-${receivable.id}`,
-        type: 'income',
-        title: `${translate('receivable')}: ${receivable.title}`,
-        category: 'Salary',
-        paymentMethod: 'Local',
-        amount,
-        date: receivable.settledAt,
-        receivablePaymentFor: receivable.id
-    });
-    saveUserData();
-    updateDashboardUI();
-    updateReportUI();
-    renderMiniCalendar();
-}
-
-function saveSavingsGoal(name, amount) {
-    if (!currentUser || !name || !Number.isFinite(amount) || amount <= 0) {
-        alert(currentLanguage === 'id'
-            ? 'Masukkan nama dan nominal target yang valid.'
-            : 'Enter a valid goal name and amount.');
+    if (currentTxType === 'transfer' && walletId === toWalletId) {
+        showToast(t('toastSameWallet'), 'error');
         return;
     }
 
-    currentUser.savingsGoal = {
+    const fromWallet = appState.wallets.find(w => w.id === walletId);
+    if (currentTxType === 'expense') {
+        fromWallet.balanceIDR -= amountIDR;
+    } else if (currentTxType === 'income') {
+        fromWallet.balanceIDR += amountIDR;
+    } else if (currentTxType === 'transfer') {
+        const toWallet = appState.wallets.find(w => w.id === toWalletId);
+        fromWallet.balanceIDR -= amountIDR;
+        toWallet.balanceIDR += amountIDR;
+    }
+
+    appState.transactions.unshift({
+        id: 'tx_' + Date.now(),
+        type: currentTxType,
         name,
-        amount,
-        updatedAt: new Date().toISOString()
-    };
-    saveUserData();
-    closeTransactionModal();
-    updateWalletGoalCard();
-}
-
-function saveUserData() {
-    if (isGuestMode) {
-        sessionStorage.setItem('guestUserData', JSON.stringify(currentUser));
-        sessionStorage.setItem('userName', currentUser.name);
-        return;
-    }
-
-    const index = usersDB.findIndex(u => u.email.toLowerCase() === currentUser.email.toLowerCase());
-    if (index === -1) usersDB.push(currentUser);
-    else usersDB[index] = currentUser;
-    persistUsersDB();
-    localStorage.setItem('sesiUserAktif', currentUser.email);
-    localStorage.setItem('fintech_current_user', JSON.stringify(currentUser));
-}
-
-function deleteTransaction(transactionIndex) {
-    const transactions = currentUser && currentUser.transactions;
-    if (!transactions || !Number.isInteger(transactionIndex) || transactionIndex < 0 || transactionIndex >= transactions.length) {
-        alert("Transaksi tidak ditemukan.");
-        return;
-    }
-
-    const transaction = transactions[transactionIndex];
-    const amount = Number(transaction.amount);
-    const currentBalance = Number(currentUser.balance);
-    const validTransactionType = ['income', 'expense', 'receivable'].includes(transaction.type);
-    if (!Number.isFinite(amount) || amount <= 0 || !validTransactionType || !Number.isFinite(currentBalance)) {
-        alert("Transaksi tidak dapat dihapus karena datanya tidak valid.");
-        return;
-    }
-
-    const confirmation = translate('confirmDeleteTransaction')
-        .replace('{title}', transaction.title)
-        .replace('{amount}', formatMoney(amount));
-    if (!confirm(confirmation)) {
-        return;
-    }
-
-    if (transaction.type === 'income') {
-        currentUser.balance = currentBalance - amount;
-        if (transaction.receivablePaymentFor !== undefined) {
-            const receivable = transactions.find(item => item.id === transaction.receivablePaymentFor);
-            if (receivable) {
-                receivable.settled = false;
-                delete receivable.settledAt;
-            }
-        }
-    } else if (transaction.type === 'expense' || (transaction.type === 'receivable' && !transaction.settled)) {
-        currentUser.balance = currentBalance + amount;
-    }
-    transactions.splice(transactionIndex, 1);
-    saveUserData();
-    updateDashboardUI();
-    updateReportUI();
-    renderMiniCalendar();
-}
-
-// UPDATE DASHBOARD & RENDER UI
-function updateDashboardUI() {
-    updateBalanceDisplay();
-    updateWalletGoalCard();
-    
-    const txs = currentUser.transactions || [];
-    
-    const now = new Date();
-    const currentMonthExpenses = txs.filter(transaction => {
-        if (transaction.type !== 'expense') return false;
-        const transactionDate = new Date(transaction.date);
-        return transactionDate.getFullYear() === now.getFullYear() &&
-            transactionDate.getMonth() === now.getMonth();
+        amountIDR,
+        category: currentTxType === 'transfer' ? 'transfer' : selectedCategory,
+        walletId,
+        toWalletId: currentTxType === 'transfer' ? toWalletId : null,
+        date
     });
-    const currentMonthTotalSpent = currentMonthExpenses.reduce(
-        (total, transaction) => total + (Number(transaction.amount) || 0),
-        0
-    );
-    const catTotals = getExpenseCategoryTotals(currentMonthExpenses);
 
-    document.getElementById('homeTotalSpent').textContent = formatMoney(currentMonthTotalSpent);
-    updateMotivationMessage(txs);
-    renderHomeBreakdown(catTotals, currentUser.balance);
+    saveState();
+    closeModal('tx-modal');
+    showToast(t('toastTxSaved'));
+    renderAll();
+}
 
-    const recentContainer = document.getElementById('recentExpensesList');
-    recentContainer.innerHTML = '';
+function deleteTransaction(txId) {
+    const idx = appState.transactions.findIndex(tx => tx.id === txId);
+    if (idx === -1) return;
+    const tx = appState.transactions[idx];
 
-    if (txs.length === 0) {
-        recentContainer.innerHTML = `<p class="text-xs text-gray-400 text-center py-4">${currentLanguage === 'id' ? 'Belum ada transaksi.' : 'No transactions yet.'}</p>`;
+    const fromWallet = appState.wallets.find(w => w.id === tx.walletId);
+    if (fromWallet) {
+        if (tx.type === 'expense') fromWallet.balanceIDR += tx.amountIDR;
+        if (tx.type === 'income') fromWallet.balanceIDR -= tx.amountIDR;
+        if (tx.type === 'transfer') {
+            fromWallet.balanceIDR += tx.amountIDR;
+            const toWallet = appState.wallets.find(w => w.id === tx.toWalletId);
+            if (toWallet) toWallet.balanceIDR -= tx.amountIDR;
+        }
+    }
+
+    appState.transactions.splice(idx, 1);
+    saveState();
+    showToast(t('toastTxDeleted'));
+    renderAll();
+}
+
+// ==================== WALLET & SAFE BUDGET MODALS ====================
+function openAddWalletModal() {
+    document.getElementById('new-wallet-name').value = '';
+    document.getElementById('wallet-modal').classList.remove('hidden');
+    lucide.createIcons();
+}
+
+function saveNewWallet(e) {
+    e.preventDefault();
+    const name = document.getElementById('new-wallet-name').value.trim();
+    const color = document.getElementById('new-wallet-color').value;
+
+    appState.wallets.push({
+        id: 'w_' + Date.now(),
+        name,
+        balanceIDR: 0,
+        color,
+        icon: 'wallet'
+    });
+
+    saveState();
+    closeModal('wallet-modal');
+    showToast(t('toastWalletAdded'));
+    renderAll();
+}
+
+function openSafeBudgetModal() {
+    document.getElementById('safe-total-input').value = idrToInput(appState.safeBudget.totalBudgetIDR);
+    document.getElementById('safe-days-input').value = appState.safeBudget.days;
+    document.getElementById('safe-budget-modal').classList.remove('hidden');
+    lucide.createIcons();
+}
+
+function saveSafeBudget(e) {
+    e.preventDefault();
+    const totalVal = parseFloat(document.getElementById('safe-total-input').value) || 0;
+    const days = parseInt(document.getElementById('safe-days-input').value) || 1;
+    appState.safeBudget = {
+        totalBudgetIDR: inputToIDR(totalVal),
+        days: Math.max(1, days)
+    };
+    saveState();
+    closeModal('safe-budget-modal');
+    showToast(t('toastBudgetUpdated'));
+    renderHome();
+    lucide.createIcons();
+}
+
+// ==================== RENDERING: HISTORY ====================
+function populateHistoryFilters() {
+    const monthSel = document.getElementById('filter-month');
+    const prevMonth = monthSel.value;
+    const months = [...new Set(appState.transactions.map(tx => tx.date.slice(0, 7)))].sort().reverse();
+    monthSel.innerHTML = `<option value="all">${t('allMonths')}</option>` +
+        months.map(m => `<option value="${m}">${m}</option>`).join('');
+    if (months.includes(prevMonth)) monthSel.value = prevMonth;
+
+    const walletSel = document.getElementById('filter-wallet');
+    const prevWallet = walletSel.value;
+    walletSel.innerHTML = `<option value="all">${t('allWallets')}</option>` +
+        appState.wallets.map(w => `<option value="${w.id}">${w.name}</option>`).join('');
+    if (appState.wallets.some(w => w.id === prevWallet)) walletSel.value = prevWallet;
+}
+
+function renderHistory() {
+    populateHistoryFilters();
+    const query = document.getElementById('history-search').value.toLowerCase().trim();
+    const fMonth = document.getElementById('filter-month').value;
+    const fType = document.getElementById('filter-type').value;
+    const fWallet = document.getElementById('filter-wallet').value;
+
+    const filtered = appState.transactions.filter(tx => {
+        const matchName = tx.name.toLowerCase().includes(query);
+        const matchMonth = fMonth === 'all' || tx.date.startsWith(fMonth);
+        const matchType = fType === 'all' || tx.type === fType;
+        const matchWallet = fWallet === 'all' || tx.walletId === fWallet || tx.toWalletId === fWallet;
+        return matchName && matchMonth && matchType && matchWallet;
+    }).sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id));
+
+    document.getElementById('history-count-badge').textContent = filtered.length;
+    const container = document.getElementById('history-grouped-list');
+
+    if (filtered.length === 0) {
+        container.innerHTML = renderEmptyState('search-x', t('noTransactions'), t('noTransactionsDesc'));
+        lucide.createIcons();
+        return;
+    }
+
+    // Group by date
+    const groups = {};
+    filtered.forEach(tx => {
+        if (!groups[tx.date]) groups[tx.date] = [];
+        groups[tx.date].push(tx);
+    });
+
+    container.innerHTML = Object.keys(groups).map(date => `
+    <div class="space-y-2">
+      <div class="flex items-center justify-between px-1">
+        <span class="text-xs font-extrabold text-slate-500 dark:text-slate-400">${date}</span>
+        <span class="text-[11px] font-semibold text-slate-400">${groups[date].length} ${t('itemCount')}</span>
+      </div>
+      <div class="space-y-2">
+        ${groups[date].map(tx => renderTransactionCard(tx, true)).join('')}
+      </div>
+    </div>
+  `).join('');
+
+    lucide.createIcons();
+}
+
+// ==================== GOALS & RECEIVABLES (PIUTANG) ====================
+function switchGoalsTab(tab) {
+    const goalsBtn = document.getElementById('subtab-goals-btn');
+    const debtsBtn = document.getElementById('subtab-debts-btn');
+    const goalsPanel = document.getElementById('goals-panel');
+    const debtsPanel = document.getElementById('debts-panel');
+
+    if (tab === 'goals') {
+        goalsBtn.className = 'py-2.5 text-xs font-bold rounded-xl bg-white dark:bg-slate-800 text-indigo-600 dark:text-white shadow-sm transition';
+        debtsBtn.className = 'py-2.5 text-xs font-bold rounded-xl text-slate-500 dark:text-slate-400 transition';
+        goalsPanel.classList.remove('hidden');
+        debtsPanel.classList.add('hidden');
     } else {
-        txs.slice(0, 3).forEach(t => {
-            const isInc = t.type === 'income';
-        const isReceivable = t.type === 'receivable';
-        const sign = isInc ? '+' : '-';
-        const colorClass = isInc ? 'text-emerald-600' : isReceivable ? 'text-amber-600' : 'text-gray-900';
-        const iconBg = isInc ? 'bg-emerald-50 text-emerald-600' : isReceivable ? 'bg-amber-50 text-amber-600' : 'bg-indigo-50 text-indigo-600';
-        const iconClass = isInc ? 'fa-wallet' : isReceivable ? 'fa-hand-holding-dollar' : 'fa-coffee';
-        const transactionLabel = isReceivable ? translate('receivable') : translateCategory(t.category);
+        debtsBtn.className = 'py-2.5 text-xs font-bold rounded-xl bg-white dark:bg-slate-800 text-amber-600 dark:text-amber-400 shadow-sm transition';
+        goalsBtn.className = 'py-2.5 text-xs font-bold rounded-xl text-slate-500 dark:text-slate-400 transition';
+        debtsPanel.classList.remove('hidden');
+        goalsPanel.classList.add('hidden');
+    }
+}
 
-            const div = document.createElement('div');
-            div.className = "flex items-center justify-between p-3 bg-white border border-gray-100 rounded-xl shadow-xs";
-            div.innerHTML = `
-                <div class="flex items-center space-x-3">
-                    <div class="w-10 h-10 rounded-xl ${iconBg} flex items-center justify-center text-sm font-semibold">
-                        <i class="fa-solid ${iconClass}"></i>
-                    </div>
-                    <div>
-                        <h5 class="text-xs font-bold text-gray-900">${escapeHtml(t.title)}</h5>
-                        <p class="text-[10px] text-gray-400">${transactionLabel} • ${new Date(t.date).toLocaleDateString(currentLanguage === 'id' ? 'id-ID' : 'en-US')}</p>
-                    </div>
-                </div>
-                <span class="text-xs font-bold ${colorClass}">${sign}${formatMoney(t.amount)}</span>
-            `;
-            recentContainer.appendChild(div);
-        });
+function renderGoalsAndDebts() {
+    // Render Goals
+    const goalsList = document.getElementById('goals-list');
+    if (appState.goals.length === 0) {
+        goalsList.innerHTML = renderEmptyState('target', t('noGoals'), t('noGoalsDesc'));
+    } else {
+        goalsList.innerHTML = appState.goals.map(g => {
+            const pct = g.targetIDR > 0 ? Math.min(100, Math.round((g.savedIDR / g.targetIDR) * 100)) : 0;
+            const summaryText = t('collectedOf')
+                .replace('{saved}', formatMoney(g.savedIDR))
+                .replace('{target}', formatMoney(g.targetIDR));
+
+            return `
+        <div class="bg-white dark:bg-slate-900 p-4 rounded-3xl border border-slate-200/70 dark:border-slate-800 shadow-sm space-y-3">
+          <div class="flex items-start justify-between">
+            <div>
+              <h4 class="font-extrabold text-sm text-slate-800 dark:text-slate-100">${g.name}</h4>
+              <p class="text-[11px] text-slate-400 mt-0.5">${t('deadlinePrefix')} ${g.deadline}</p>
+            </div>
+            <span class="px-2.5 py-1 rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 text-xs font-extrabold">${pct}%</span>
+          </div>
+          <div>
+            <p class="text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">${summaryText}</p>
+            <div class="w-full h-2.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+              <div class="h-full bg-indigo-600 rounded-full transition-all duration-500" style="width: ${pct}%"></div>
+            </div>
+          </div>
+          <button onclick="openTopupGoalModal('${g.id}')" class="w-full py-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 text-indigo-600 dark:text-indigo-300 font-bold text-xs transition">
+            + ${t('topupBtn')}
+          </button>
+        </div>
+      `;
+        }).join('');
     }
 
-    renderFullHistory();
+    // Render Receivables (Debts)
+    const debtsList = document.getElementById('debts-list');
+    if (appState.debts.length === 0) {
+        debtsList.innerHTML = renderEmptyState('hand-coins', t('noDebts'), t('noDebtsDesc'));
+    } else {
+        debtsList.innerHTML = appState.debts.map(d => {
+            const badgeClass = d.paid
+                ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400'
+                : 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400';
+            return `
+        <div class="bg-white dark:bg-slate-900 p-4 rounded-3xl border border-slate-200/70 dark:border-slate-800 shadow-sm space-y-3">
+          <div class="flex items-start justify-between">
+            <div>
+              <h4 class="font-extrabold text-sm text-slate-800 dark:text-slate-100">${d.person}</h4>
+              <p class="text-[11px] text-slate-400 mt-0.5">${getWalletName(d.walletId)} • ${t('duePrefix')} ${d.dueDate}</p>
+            </div>
+            <span class="px-2.5 py-1 rounded-full text-[11px] font-bold ${badgeClass}">
+              ${d.paid ? t('paidBadge') : t('unpaidBadge')}
+            </span>
+          </div>
+          <div class="flex items-center justify-between pt-1">
+            <span class="text-base font-extrabold text-slate-900 dark:text-white">${formatMoney(d.amountIDR)}</span>
+            ${!d.paid ? `
+              <button onclick="markDebtPaid('${d.id}')" class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition">
+                ✓ ${t('markPaidBtn')}
+              </button>
+            ` : ''}
+          </div>
+        </div>
+      `;
+        }).join('');
+    }
+
+    lucide.createIcons();
 }
 
-function updateMotivationMessage(transactions) {
-    const element = document.getElementById('motivationMessage');
-    if (!element) return;
-
-    const now = new Date();
-    const monthExpenses = transactions.reduce((total, transaction) => {
-        if (transaction.type !== 'expense') return total;
-        const date = new Date(transaction.date);
-        return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth()
-            ? total + Number(transaction.amount || 0)
-            : total;
-    }, 0);
-    const balance = Number(currentUser.balance) || 0;
-    const monthlyIncome = transactions.reduce((total, transaction) => {
-        if (transaction.type !== 'income') return total;
-        const date = new Date(transaction.date);
-        return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth()
-            ? total + Number(transaction.amount || 0)
-            : total;
-    }, 0);
-
-    const messageKey = balance <= 0
-        ? 'motivationLowBalance'
-        : monthlyIncome > 0 && monthExpenses > monthlyIncome
-            ? 'motivationHighSpending'
-            : currentUser.savingsGoal && balance >= Number(currentUser.savingsGoal.amount) / USD_TO_IDR
-                ? 'motivationPositive'
-                : 'motivationBalanced';
-    element.textContent = translate(messageKey);
+function openAddGoalModal() {
+    document.getElementById('goal-name-input').value = '';
+    document.getElementById('goal-target-input').value = '';
+    document.getElementById('goal-deadline-input').value = new Date().toISOString().slice(0, 10);
+    document.getElementById('goal-modal').classList.remove('hidden');
+    lucide.createIcons();
 }
 
-function updateWalletGoalCard() {
-    if (!currentUser) return;
-    const goal = currentUser.savingsGoal;
-    const primaryLabel = document.getElementById('walletCardPrimaryLabel');
-    const primaryValue = document.getElementById('walletCardPrimaryValue');
-    const secondaryLabel = document.getElementById('walletCardSecondaryLabel');
-    const secondaryValue = document.getElementById('walletCardSecondaryValue');
+function saveNewGoal(e) {
+    e.preventDefault();
+    const name = document.getElementById('goal-name-input').value.trim();
+    const targetVal = parseFloat(document.getElementById('goal-target-input').value) || 0;
+    const deadline = document.getElementById('goal-deadline-input').value;
 
-    if (!goal || typeof goal.name !== 'string' || !Number.isFinite(Number(goal.amount)) || Number(goal.amount) <= 0) {
-        primaryLabel.textContent = translate('cardNumber');
-        primaryValue.textContent = '**** **** **** 8766';
-        secondaryLabel.textContent = translate('validThru');
-        secondaryValue.textContent = '08/28';
+    if (targetVal <= 0) {
+        showToast(t('toastInvalidAmount'), 'error');
         return;
     }
 
-    const targetAmount = Number(goal.amount);
-    const balance = Number(currentUser.balance);
-    const progress = Number.isFinite(balance) ? Math.max(0, balance) : 0;
-    const progressPercent = Math.min(100, Math.floor((progress / targetAmount) * 100));
-    primaryLabel.textContent = translate('savingsGoalName');
-    primaryValue.textContent = goal.name;
-    primaryValue.title = goal.name;
-    secondaryLabel.textContent = translate('goalProgress');
-    secondaryValue.textContent = isBalanceSensorHidden
-        ? `•••• / ${formatRupiah(targetAmount)}`
-        : `${formatRupiah(progress * USD_TO_IDR)} / ${formatRupiah(targetAmount)} (${progressPercent}%)`;
+    appState.goals.push({
+        id: 'goal_' + Date.now(),
+        name,
+        targetIDR: inputToIDR(targetVal),
+        savedIDR: 0,
+        deadline
+    });
+
+    saveState();
+    closeModal('goal-modal');
+    showToast(t('toastGoalAdded'));
+    renderGoalsAndDebts();
 }
 
-function setHistoryFilter(filter) {
-    if (!['month', 'all', 'income', 'expense', 'receivable'].includes(filter)) {
+function openTopupGoalModal(goalId) {
+    const goal = appState.goals.find(g => g.id === goalId);
+    if (!goal) return;
+    document.getElementById('topup-goal-id').value = goalId;
+    document.getElementById('topup-goal-title-label').textContent = goal.name;
+    document.getElementById('topup-amount-input').value = '';
+    populateWalletSelects();
+    document.getElementById('topup-goal-modal').classList.remove('hidden');
+    lucide.createIcons();
+}
+
+function submitGoalTopup(e) {
+    e.preventDefault();
+    const goalId = document.getElementById('topup-goal-id').value;
+    const amountVal = parseFloat(document.getElementById('topup-amount-input').value) || 0;
+    const walletId = document.getElementById('topup-wallet-select').value;
+
+    if (amountVal <= 0) {
+        showToast(t('toastInvalidAmount'), 'error');
         return;
     }
 
-    activeHistoryFilter = filter;
-    if (filter !== 'month') {
-        historyTypeFilter = filter;
+    const amountIDR = inputToIDR(amountVal);
+    const goal = appState.goals.find(g => g.id === goalId);
+    const wallet = appState.wallets.find(w => w.id === walletId);
+
+    if (goal && wallet) {
+        wallet.balanceIDR -= amountIDR;
+        goal.savedIDR += amountIDR;
     }
-    const filters = {
-        month: document.getElementById('historyFilterMonth'),
-        all: document.getElementById('historyFilterAll'),
-        income: document.getElementById('historyFilterIncome'),
-        expense: document.getElementById('historyFilterExpense'),
-        receivable: document.getElementById('historyFilterReceivable')
+
+    saveState();
+    closeModal('topup-goal-modal');
+    showToast(t('toastGoalTopup'));
+    renderAll();
+}
+
+function openAddDebtModal() {
+    document.getElementById('debt-person-input').value = '';
+    document.getElementById('debt-amount-input').value = '';
+    document.getElementById('debt-due-input').value = new Date().toISOString().slice(0, 10);
+    populateWalletSelects();
+    document.getElementById('debt-modal').classList.remove('hidden');
+    lucide.createIcons();
+}
+
+function saveNewDebt(e) {
+    e.preventDefault();
+    const person = document.getElementById('debt-person-input').value.trim();
+    const amountVal = parseFloat(document.getElementById('debt-amount-input').value) || 0;
+    const dueDate = document.getElementById('debt-due-input').value;
+    const walletId = document.getElementById('debt-wallet-select').value;
+
+    if (amountVal <= 0) {
+        showToast(t('toastInvalidAmount'), 'error');
+        return;
+    }
+
+    const amountIDR = inputToIDR(amountVal);
+    const wallet = appState.wallets.find(w => w.id === walletId);
+    if (wallet) {
+        wallet.balanceIDR -= amountIDR;
+    }
+
+    appState.debts.unshift({
+        id: 'debt_' + Date.now(),
+        person,
+        amountIDR,
+        dueDate,
+        walletId,
+        paid: false
+    });
+
+    saveState();
+    closeModal('debt-modal');
+    showToast(t('toastDebtAdded'));
+    renderAll();
+}
+
+function markDebtPaid(debtId) {
+    const debt = appState.debts.find(d => d.id === debtId);
+    if (!debt || debt.paid) return;
+
+    debt.paid = true;
+    const wallet = appState.wallets.find(w => w.id === debt.walletId);
+    if (wallet) {
+        wallet.balanceIDR += debt.amountIDR;
+    }
+
+    saveState();
+    showToast(t('toastDebtPaid'));
+    renderAll();
+}
+
+// ==================== REPORT & ACCOUNT ====================
+function renderReport() {
+    const monthSelect = document.getElementById('report-month-select');
+    const currentYM = new Date().toISOString().slice(0, 7);
+    const months = [...new Set([currentYM, ...appState.transactions.map(tx => tx.date.slice(0, 7))])].sort().reverse();
+    const selected = months.includes(monthSelect.value) ? monthSelect.value : currentYM;
+
+    monthSelect.innerHTML = months.map(m => `<option value="${m}">${m}</option>`).join('');
+    monthSelect.value = selected;
+
+    let income = 0;
+    let expense = 0;
+    const catTotals = {};
+
+    appState.transactions.forEach(tx => {
+        if (tx.date.startsWith(selected)) {
+            if (tx.type === 'income') income += tx.amountIDR;
+            if (tx.type === 'expense') {
+                expense += tx.amountIDR;
+                catTotals[tx.category] = (catTotals[tx.category] || 0) + tx.amountIDR;
+            }
+        }
+    });
+
+    document.getElementById('report-income').textContent = formatMoney(income);
+    document.getElementById('report-expense').textContent = formatMoney(expense);
+    const net = income - expense;
+    document.getElementById('report-net-diff').textContent = (net >= 0 ? '+' : '') + formatMoney(net);
+
+    const totalFlow = income + expense;
+    const incPct = totalFlow > 0 ? (income / totalFlow) * 100 : 50;
+    const expPct = totalFlow > 0 ? (expense / totalFlow) * 100 : 50;
+    document.getElementById('report-income-bar').style.width = `${incPct}%`;
+    document.getElementById('report-expense-bar').style.width = `${expPct}%`;
+
+    // Category Breakdown
+    const catList = document.getElementById('category-breakdown-list');
+    const sortedCats = Object.entries(catTotals).sort((a, b) => b[1] - a[1]);
+
+    if (sortedCats.length === 0) {
+        catList.innerHTML = `<p class="text-xs text-slate-400 text-center py-4">${t('noExpenseData')}</p>`;
+    } else {
+        catList.innerHTML = sortedCats.map(([catId, val]) => {
+            const cat = CATEGORIES.find(c => c.id === catId) || CATEGORIES[7];
+            const pct = expense > 0 ? Math.round((val / expense) * 100) : 0;
+            return `
+        <div class="space-y-1">
+          <div class="flex items-center justify-between text-xs">
+            <span class="font-bold text-slate-700 dark:text-slate-200 flex items-center gap-2">
+              <i data-lucide="${cat.icon}" class="w-3.5 h-3.5 text-indigo-500"></i>
+              ${t(cat.labelKey)}
+            </span>
+            <span class="font-bold text-slate-600 dark:text-slate-300">${formatMoney(val)} (${pct}%)</span>
+          </div>
+          <div class="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+            <div class="h-full bg-indigo-600 rounded-full" style="width: ${pct}%"></div>
+          </div>
+        </div>
+      `;
+        }).join('');
+    }
+
+    // Sync Account Settings Inputs
+    document.getElementById('settings-username-input').value = appState.user.name;
+    document.getElementById('settings-currency-select').value = appState.settings.currency;
+    document.getElementById('settings-lang-select').value = appState.settings.lang;
+
+    lucide.createIcons();
+}
+
+function updateProfileName() {
+    const val = document.getElementById('settings-username-input').value.trim();
+    if (val) {
+        appState.user.name = val;
+        saveState();
+        showToast(t('toastProfileSaved'));
+        renderAll();
+    }
+}
+
+// ==================== DATA EXPORT, BACKUP, RESTORE, RESET ====================
+function exportToCSV() {
+    const headers = ['ID', 'Date', 'Type', 'Name', 'Category', 'Wallet', 'Amount_IDR', 'Amount_USD'];
+    const rows = appState.transactions.map(tx => [
+        tx.id,
+        tx.date,
+        tx.type,
+        `"${tx.name.replace(/"/g, '""')}"`,
+        tx.category,
+        `"${getWalletName(tx.walletId)}"`,
+        Math.round(tx.amountIDR),
+        (tx.amountIDR / USD_RATE).toFixed(2)
+    ]);
+    const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    downloadFile(csv, `sakupintar-report-${new Date().toISOString().slice(0, 10)}.csv`, 'text/csv;charset=utf-8;');
+    showToast(t('toastCsvExported'));
+}
+
+function backupJSON() {
+    const json = JSON.stringify(appState, null, 2);
+    downloadFile(json, `sakupintar-backup-${new Date().toISOString().slice(0, 10)}.json`, 'application/json');
+    showToast(t('toastJsonBackup'));
+}
+
+function restoreJSON(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function (ev) {
+        try {
+            const parsed = JSON.parse(ev.target.result);
+            if (parsed && Array.isArray(parsed.wallets) && Array.isArray(parsed.transactions)) {
+                appState = parsed;
+                saveState();
+                applyTheme();
+                applyTranslations();
+                renderAll();
+                showToast(t('toastJsonRestored'));
+            } else {
+                showToast(t('toastJsonError'), 'error');
+            }
+        } catch {
+            showToast(t('toastJsonError'), 'error');
+        }
     };
-
-    Object.entries(filters).forEach(([key, button]) => {
-        const isActive = key === activeHistoryFilter;
-        button.setAttribute('aria-pressed', String(isActive));
-        button.classList.toggle('bg-indigo-600', isActive);
-        button.classList.toggle('text-white', isActive);
-        button.classList.toggle('shadow-sm', isActive);
-        button.classList.toggle('bg-gray-100', !isActive);
-        button.classList.toggle('text-gray-600', !isActive);
-        button.classList.toggle('hover:bg-gray-200', !isActive);
-        button.classList.toggle('hover:bg-indigo-700', isActive);
-        button.classList.toggle('font-semibold', isActive);
-        button.classList.toggle('font-medium', !isActive);
-    });
-
-    if (filter !== 'month') {
-        renderFullHistory();
-    }
+    reader.readAsText(file);
+    e.target.value = '';
 }
 
-function toggleHistorySearch() {
-    const input = document.getElementById('historySearchInput');
-    const willShow = input.classList.contains('hidden');
-    input.classList.toggle('hidden', !willShow);
-    if (willShow) {
-        input.focus();
-        return;
-    }
-
-    input.value = '';
-    historySearchQuery = '';
-    renderFullHistory();
+function downloadFile(content, filename, mimeType) {
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
 }
 
-function deleteAllTransactions() {
-    if (!currentUser || !confirm(translate('confirmDeleteAllTransactions'))) return;
-
-    currentUser.transactions = [];
-    currentUser.balance = 0;
-    historySearchQuery = '';
-    document.getElementById('historySearchInput').value = '';
-    saveUserData();
-    updateDashboardUI();
-    updateReportUI();
-    renderMiniCalendar();
+function openResetModal() {
+    document.getElementById('reset-modal').classList.remove('hidden');
+    lucide.createIcons();
 }
 
-function renderFullHistory() {
-    const container = document.getElementById('fullHistoryContainer');
-    container.innerHTML = '';
-    const txs = currentUser.transactions || [];
-
-    if (txs.length === 0) {
-        container.innerHTML = `<p class="text-xs text-gray-400 text-center py-8">${currentLanguage === 'id' ? 'Belum ada riwayat transaksi.' : 'No transaction history yet.'}</p>`;
-        return;
-    }
-
-    const visibleTransactions = txs
-        .map((transaction, index) => ({ transaction, index }))
-        .filter(({ transaction }) => historyTypeFilter === 'all' ||
-            (historyTypeFilter === 'receivable'
-                ? transaction.type === 'receivable'
-                : transaction.type === historyTypeFilter))
-        .filter(({ transaction }) => {
-            if (!historySearchQuery) return true;
-            const query = historySearchQuery.toLocaleLowerCase(currentLanguage === 'id' ? 'id-ID' : 'en-US');
-            const title = String(transaction.title || '').toLocaleLowerCase(currentLanguage === 'id' ? 'id-ID' : 'en-US');
-            const category = String(transaction.category || '').toLocaleLowerCase(currentLanguage === 'id' ? 'id-ID' : 'en-US');
-            const translatedCategory = (transaction.category
-                ? translateCategory(transaction.category)
-                : transaction.type === 'receivable' ? translate('receivable') : '')
-                .toLocaleLowerCase(currentLanguage === 'id' ? 'id-ID' : 'en-US');
-            return title.includes(query) || category.includes(query) || translatedCategory.includes(query);
-        });
-
-    if (visibleTransactions.length === 0) {
-        container.innerHTML = `<p class="text-xs text-gray-400 text-center py-8">${translate('noFilteredTransactions')}</p>`;
-        return;
-    }
-
-    visibleTransactions.forEach(({ transaction: t, index }) => {
-        const isReceivable = t.type === 'receivable';
-        const isInc = t.type === 'income';
-        const sign = isInc ? '+' : '-';
-        const colorClass = isInc ? 'text-emerald-600' : isReceivable && !t.settled ? 'text-amber-600' : 'text-gray-900';
-        const transactionDescription = isReceivable
-            ? `${translate('receivable')} • ${t.settled ? translate('loanPaid') : translate('unpaidLoan')}`
-            : `${translateCategory(t.category)} • ${new Date(t.date).toLocaleTimeString(currentLanguage === 'id' ? 'id-ID' : 'en-US', {hour: '2-digit', minute:'2-digit'})}`;
-        
-        const div = document.createElement('div');
-        div.className = "history-transaction flex items-center justify-between p-3.5 bg-white border border-gray-100 rounded-xl shadow-xs";
-        div.innerHTML = `
-            <div class="flex items-center space-x-3 min-w-0 flex-1">
-                <div class="w-10 h-10 rounded-xl bg-gray-50 text-gray-600 flex items-center justify-center text-sm font-semibold">
-                    <i class="fa-solid ${isInc ? 'fa-arrow-down' : 'fa-arrow-up'}"></i>
-                </div>
-                <div class="min-w-0">
-                    <h5 class="text-xs font-bold text-gray-900">${escapeHtml(t.title)}</h5>
-                    <p class="text-[10px] text-gray-400">${transactionDescription}</p>
-                </div>
-            </div>
-            <div class="flex items-center space-x-2 shrink-0">
-                <span class="text-xs font-bold ${colorClass}">${sign}${formatMoney(t.amount)}</span>
-                ${isReceivable && !t.settled ? `<button type="button" onclick="markReceivablePaid(${index})" aria-label="${translate('markLoanPaid')}" title="${translate('markLoanPaid')}" class="w-8 h-8 rounded-lg text-emerald-600 hover:bg-emerald-50 transition"><i class="fa-solid fa-check text-xs"></i></button>` : ''}
-                <button type="button" onclick="deleteTransaction(${index})" aria-label="Hapus transaksi" title="Hapus transaksi" class="w-8 h-8 rounded-lg text-gray-400 hover:text-rose-600 hover:bg-rose-50 transition">
-                    <i class="fa-solid fa-trash-can text-xs"></i>
-                </button>
-                <button type="button" onclick="openEditTransactionModal(${index})" aria-label="${translate('editTransaction')}" title="${translate('editTransaction')}" class="w-8 h-8 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition">
-                    <i class="fa-solid fa-pencil text-xs"></i>
-                </button>
-            </div>
-        `;
-        let holdTimeout;
-        let startX = 0;
-        let startY = 0;
-        let longPressTriggered = false;
-        let gestureEligible = false;
-
-        div.addEventListener('pointerdown', event => {
-            gestureEligible = event.button === 0 && !event.target.closest('button');
-            if (!gestureEligible) return;
-            startX = event.clientX;
-            startY = event.clientY;
-            longPressTriggered = false;
-            holdTimeout = window.setTimeout(() => {
-                longPressTriggered = true;
-                deleteTransaction(index);
-            }, 650);
-        });
-        div.addEventListener('pointermove', event => {
-            if (Math.abs(event.clientX - startX) > 10 || Math.abs(event.clientY - startY) > 10) {
-                window.clearTimeout(holdTimeout);
-            }
-        });
-        const finishGesture = event => {
-            window.clearTimeout(holdTimeout);
-            if (!gestureEligible) return;
-            gestureEligible = false;
-            const deltaX = event.clientX - startX;
-            const deltaY = event.clientY - startY;
-            if (!longPressTriggered && Math.abs(deltaX) >= 80 && Math.abs(deltaX) > Math.abs(deltaY)) {
-                deleteTransaction(index);
-            }
-        };
-        div.addEventListener('pointerup', finishGesture);
-        div.addEventListener('pointercancel', () => {
-            window.clearTimeout(holdTimeout);
-            gestureEligible = false;
-        });
-        container.appendChild(div);
-    });
+function confirmResetAll() {
+    const currentUser = appState.user;
+    const currentSettings = appState.settings;
+    appState = getDefaultData();
+    appState.isLoggedIn = true;
+    appState.user = currentUser;
+    appState.settings = currentSettings;
+    saveState();
+    closeModal('reset-modal');
+    showToast(t('toastResetDone'));
+    renderAll();
 }
 
-function updateReportUI() {
-    const txs = currentUser.transactions || [];
-    let totalSpent = 0;
-    let totalSalary = 0;
-
-    txs.forEach(t => {
-        if (t.type === 'expense') {
-            totalSpent += t.amount;
-        } else if (t.type === 'income') {
-            totalSalary += t.amount;
-        }
-    });
-    const catTotals = getExpenseCategoryTotals(txs);
-
-    document.getElementById('reportTotalSalary').textContent = formatMoney(totalSalary);
-    document.getElementById('reportTotalExpense').textContent = formatMoney(totalSpent);
-    document.getElementById('reportChartCenterText').textContent = formatMoney(totalSpent);
-
-    const legendList = document.getElementById('reportLegendList');
-    legendList.innerHTML = '';
-
-    getExpenseCategories().forEach(category => {
-        const amount = catTotals[category.reportKey];
-        const pct = totalSpent > 0 ? Math.round((amount / totalSpent) * 100) : 0;
-        const row = document.createElement('div');
-        row.className = "flex items-center justify-between";
-        row.innerHTML = `
-            <span class="flex items-center space-x-2 text-gray-600"><span class="w-2.5 h-2.5 rounded-full ${category.reportColor}"></span><span>${translate(category.translationKey)}</span></span>
-            <span class="font-semibold text-gray-900">${pct}% (${formatMoney(amount)})</span>
-        `;
-        legendList.appendChild(row);
-    });
+// ==================== INITIALIZATION ====================
+function renderAll() {
+    applyTranslations();
+    renderHome();
+    renderHistory();
+    renderGoalsAndDebts();
+    renderReport();
+    lucide.createIcons();
 }
 
-function renderMiniCalendar() {
-    const grid = document.getElementById('miniCalendarGrid');
-    const monthTitle = document.getElementById('calMonthTitle');
-    const year = displayedCalendarMonth.getFullYear();
-    const month = displayedCalendarMonth.getMonth();
-    const monthLabel = displayedCalendarMonth.toLocaleDateString(currentLanguage === 'id' ? 'id-ID' : 'en-US', {
-        month: 'short',
-        year: 'numeric'
-    });
-    monthTitle.textContent = monthLabel;
-    document.getElementById('reportMonthYear').textContent =
-        displayedCalendarMonth.toLocaleDateString(currentLanguage === 'id' ? 'id-ID' : 'en-US', {
-            month: 'long',
-            year: 'numeric'
-        });
-
-    grid.innerHTML = '';
-    const firstDayOffset = (new Date(year, month, 1).getDay() + 6) % 7;
-    for (let i = 0; i < firstDayOffset; i++) {
-        const emptySpan = document.createElement('span');
-        emptySpan.setAttribute('aria-hidden', 'true');
-        grid.appendChild(emptySpan);
-    }
-
-    const transactionsByDate = new Map();
-    (currentUser.transactions || []).forEach(transaction => {
-        const transactionDate = new Date(transaction.date);
-        if (Number.isNaN(transactionDate.getTime()) ||
-            transactionDate.getFullYear() !== year ||
-            transactionDate.getMonth() !== month) {
-            return;
-        }
-
-        const dateKey = `${transactionDate.getFullYear()}-${transactionDate.getMonth()}-${transactionDate.getDate()}`;
-        if (!transactionsByDate.has(dateKey)) transactionsByDate.set(dateKey, []);
-        transactionsByDate.get(dateKey).push(transaction);
-    });
-
-    const today = new Date();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    for (let day = 1; day <= daysInMonth; day++) {
-        const span = document.createElement('span');
-        span.textContent = day;
-        span.className = 'calendar-day';
-        span.setAttribute('aria-label', new Date(year, month, day).toLocaleDateString(
-            currentLanguage === 'id' ? 'id-ID' : 'en-US',
-            { day: 'numeric', month: 'long', year: 'numeric' }
-        ));
-
-        const dateKey = `${year}-${month}-${day}`;
-        const dayTransactions = transactionsByDate.get(dateKey) || [];
-        const hasMarkedPayment = dayTransactions.some(transaction => {
-            if (transaction.type !== 'income') return false;
-            const paymentMethod = String(transaction.paymentMethod || '').trim().toLowerCase();
-            return ['cash', 'ewalet', 'bank'].includes(paymentMethod);
-        });
-
-        if (hasMarkedPayment) {
-            span.classList.add('calendar-day-payment');
-        }
-
-        if (today.getFullYear() === year && today.getMonth() === month && today.getDate() === day) {
-            span.classList.add('calendar-day-today');
-        }
-        grid.appendChild(span);
-    }
-}
-
-function changeCalendarMonth(monthOffset) {
-    displayedCalendarMonth = new Date(
-        displayedCalendarMonth.getFullYear(),
-        displayedCalendarMonth.getMonth() + monthOffset,
-        1
-    );
-    renderMiniCalendar();
-}
+document.addEventListener('DOMContentLoaded', () => {
+    switchAuthTab('login');
+    applyTheme();
+    applyTranslations();
+    checkAuth();
+});
